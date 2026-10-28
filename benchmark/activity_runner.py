@@ -35,10 +35,10 @@ from datasets.activity_dataset import (
 
 from benchmark.policy_seed import seed_policy_document
 
-ROOT = Path(__file__).resolve().parents[2]
-SKILLS = ROOT / "lisa" / "skills"
+ROOT = Path(__file__).resolve().parents[1]
+SKILLS = ROOT / "skills"
 ARTIFACTS = ROOT / "target" / "test-artifacts" / "lisa-activity-benchmark"
-MEMORY_DATASET = ROOT / "lisa" / "datasets" / "activity_memory"
+MEMORY_DATASET = ROOT / "datasets" / "activity_memory"
 MEMORY_MANIFEST = MEMORY_DATASET / "manifests" / "benchmark.json"
 MEMORY_ARTIFACTS = ROOT / "target" / "test-artifacts" / "lisa-activity-memory-benchmark"
 OWNER = "activity-benchmark-owner"

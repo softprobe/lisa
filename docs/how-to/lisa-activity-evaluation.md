@@ -1,7 +1,7 @@
 # Lisa activity agent benchmark
 
 The activity agent benchmark is the labeled dataset in
-[`lisa/datasets/activity_management`](../../lisa/datasets/activity_management/README.md).
+[`datasets/activity_management`](../../datasets/activity_management/README.md).
 Each case defines a sequence of main-chat and Slack-context user turns, tool
 actions that must or must not occur, labeled final activity and policy
 state, and reply checks. The manifest pins the dataset bytes and the runner
@@ -17,7 +17,7 @@ Run the benchmark explicitly because every turn invokes Lisa's configured model
 and may incur provider charges:
 
 ```sh
-uv run --project lisa python lisa/scripts/evaluate_activity_dataset.py \
+uv run --project . python scripts/evaluate_activity_dataset.py \
   --live --split benchmark
 ```
 
@@ -28,7 +28,7 @@ Provide `GOOGLE_API_KEY` or `GEMINI_API_KEY` in the process environment. The
 live activity runner uses a direct Gemini model path and rejects custom base
 URLs. It uses the actual OpenHands
 conversation backend and Lisa MCP tools. Disposable Postgres and per-case Lisa
-databases come only from [`lisa/conftest.py`](../../lisa/conftest.py)
+databases come only from [`conftest.py`](../../conftest.py)
 (`start_lisa_postgres` / `create_lisa_test_database` / `stop_lisa_postgres`).
 Conversation/model recordings stay in the run-owned artifact directory; the
 transient service is removed at exit. Reports and captured logs are kept under
@@ -62,7 +62,7 @@ judge or triage provider while seeding.
 
 ## Integration tests
 
-`lisa/tests/test_activity_management_integration.py` contains three opt-in
+`tests/test_activity_management_integration.py` contains three opt-in
 model-backed integration scenarios. They are software integration tests, not
 the benchmark and not a dataset-based quality estimate. They use transient
 Postgres and temporary conversation storage. To run them explicitly:
@@ -70,7 +70,7 @@ Postgres and temporary conversation storage. To run them explicitly:
 ```sh
 LISA_RUN_ACTIVITY_MANAGEMENT_INTEGRATION=1 \
 LISA_OWNER_USER_IDS=activity-eval-owner \
-uv run --project lisa pytest -q lisa/tests/test_activity_management_integration.py
+uv run --project . pytest -q tests/test_activity_management_integration.py
 ```
 
 The test process does not load `.env` automatically. The benchmark and these

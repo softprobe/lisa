@@ -13,7 +13,7 @@ from datasets.policy_dataset import load_dataset
 ROOT = Path(__file__).resolve().parents[1] / "datasets/policy_evaluation"
 SAMPLE_SPEC = importlib.util.spec_from_file_location(
     "lisa_policy_evaluation_sample",
-    Path(__file__).resolve().parents[2]
+    Path(__file__).resolve().parents[1]
     / ".agents/skills/run-lisa-policy-evaluation/scripts/create_sample_manifest.py",
 )
 SAMPLE = importlib.util.module_from_spec(SAMPLE_SPEC)

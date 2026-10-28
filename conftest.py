@@ -32,7 +32,7 @@ except ImportError:  # Live evaluation runners import helpers without the test e
     pytest = None
 
 WORKSPACE_ID = "11111111-1111-4111-8111-111111111111"
-REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+REPOSITORY_ROOT = Path(__file__).resolve().parent
 TEST_STACK = REPOSITORY_ROOT / "scripts" / "test_stack.py"
 TEST_COMPOSE = REPOSITORY_ROOT / "tests" / "compose.test.yaml"
 _PROVISION_SCRIPT = Path(__file__).resolve().parent / "scripts" / "provision_lisa.py"
@@ -93,7 +93,7 @@ def start_lisa_postgres(
     suite: str,
     artifact_dir: Path | None = None,
 ) -> LisaPostgresStack:
-    """Start the shared transient ``lisa-postgres`` Compose service.
+    """Start the run-owned transient Lisa PostgreSQL service.
 
     The stack is tracked until ``stop_lisa_postgres`` runs. Process exit and
     pytest session finish also stop any still-active stacks so interrupted runs
@@ -232,6 +232,21 @@ def create_lisa_test_database(
     )
 
 
+def drop_lisa_test_database(database: LisaTestDatabase) -> None:
+    """Drop one test-owned database and its credentials after its test finishes."""
+    name = urlparse(database.provision_url).path.lstrip("/")
+    if not name.startswith("lisa_test_"):
+        raise ValueError("Refusing to drop a database outside Lisa's transient test namespace")
+    with psycopg.connect(_maintenance_url(database.provision_url), autocommit=True) as connection:
+        connection.execute(
+            sql.SQL("DROP DATABASE IF EXISTS {} WITH (FORCE)").format(sql.Identifier(name))
+        )
+        for suffix in ("writer", "reader"):
+            connection.execute(
+                sql.SQL("DROP ROLE IF EXISTS {}").format(sql.Identifier(f"{name}_{suffix}"))
+            )
+
+
 def lisa_dogfood_target(path: Path, repository_root: Path) -> LisaDogfoodTarget:
     """Validate a run-owned dogfood env file and resolve its disposable data path."""
     repository_root = repository_root.resolve(strict=True)
@@ -243,9 +258,9 @@ def lisa_dogfood_target(path: Path, repository_root: Path) -> LisaDogfoodTarget:
     if data_root != dogfood_root or repository_root not in data_root.parents:
         raise RuntimeError("Dogfood cleanup data path must remain inside the repository")
     values = _read_environment_file(path)
-    project_name = values.get("THELAKE_DOGFOOD_PROJECT_NAME", "")
-    instance_id = values.get("THELAKE_DOGFOOD_INSTANCE_ID", "")
-    data_path = values.get("THELAKE_DOGFOOD_DATA_PATH", "")
+    project_name = values.get("LISA_DOGFOOD_PROJECT_NAME", "")
+    instance_id = values.get("LISA_DOGFOOD_INSTANCE_ID", "")
+    data_path = values.get("LISA_DOGFOOD_DATA_PATH", "")
     relative_data_path = Path(data_path)
     raw_agent_data = repository_root / relative_data_path
     agent_data = raw_agent_data.resolve()
@@ -276,8 +291,8 @@ def configure_lisa_dogfood(
     root = repository_root or REPOSITORY_ROOT
     target = lisa_dogfood_target(path, root)
     values = _read_environment_file(path)
-    workspace_id = values.get("THELAKE_DEFAULT_WORKSPACE_ID")
-    database_port = values.get("THELAKE_DOGFOOD_DB_PORT")
+    workspace_id = values.get("LISA_WORKSPACE_ID")
+    database_port = values.get("LISA_DOGFOOD_DB_PORT")
     writer_password = values.get("LISA_DATABASE_WRITER_PASSWORD")
     reader_password = values.get("LISA_DATABASE_READER_PASSWORD")
     service_token = values.get("LISA_SERVICE_TOKEN")
@@ -414,12 +429,25 @@ if pytest is not None:
     def lisa_test_database(
         postgres_test_server: str,
     ) -> Callable[[str], LisaTestDatabase]:
-        """Create a separately provisioned Lisa database for each test workspace."""
+        """Create separately provisioned databases and drop all of them after the test."""
+        created: list[LisaTestDatabase] = []
 
         def create(workspace_id: str = WORKSPACE_ID) -> LisaTestDatabase:
-            return create_lisa_test_database(postgres_test_server, workspace_id)
+            database = create_lisa_test_database(postgres_test_server, workspace_id)
+            created.append(database)
+            return database
 
-        return create
+        try:
+            yield create
+        finally:
+            cleanup_errors = []
+            for database in reversed(created):
+                try:
+                    drop_lisa_test_database(database)
+                except Exception as error:
+                    cleanup_errors.append(error)
+            if cleanup_errors:
+                raise cleanup_errors[0]
 
     @pytest.fixture
     def lisa_test_db(lisa_test_database) -> LisaTestDatabase:

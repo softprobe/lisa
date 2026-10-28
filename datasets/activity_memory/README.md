@@ -111,11 +111,11 @@ upstream IDs and revisions are retained for reproducibility and attribution.
 Run the development split while iterating and the held-out split for acceptance:
 
 ```sh
-uv run --project lisa --env-file .env \
-  python lisa/scripts/evaluate_activity_memory_dataset.py --live --split development
+uv run --project . --env-file .env \
+  python scripts/evaluate_activity_memory_dataset.py --live --split development
 
-uv run --project lisa --env-file .env \
-  python lisa/scripts/evaluate_activity_memory_dataset.py --live --split benchmark
+uv run --project . --env-file .env \
+  python scripts/evaluate_activity_memory_dataset.py --live --split benchmark
 ```
 
 Each case uses an isolated transient Postgres database and workspace through

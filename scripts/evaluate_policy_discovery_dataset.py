@@ -113,9 +113,9 @@ def run(output: Path) -> dict:
     proposal_count = sum(case["suggestion_count"] for case in consolidation_results)
     consolidation_correct = sum(case["correct"] for case in consolidation_results)
     report = {
-        "dataset": str(DATASET.relative_to(DATASET.parents[2])),
+        "dataset": str(DATASET.relative_to(DATASET.parents[1])),
         "dataset_sha256": dataset_hash,
-        "consolidation_dataset": str(CONSOLIDATION_DATASET.relative_to(CONSOLIDATION_DATASET.parents[2])),
+        "consolidation_dataset": str(CONSOLIDATION_DATASET.relative_to(CONSOLIDATION_DATASET.parents[1])),
         "consolidation_dataset_sha256": sha256(CONSOLIDATION_DATASET.read_bytes()).hexdigest(),
         "model": os.getenv("GEMINI_MODEL_NAME", "gemini-3.8-flash"),
         "cases": rows,

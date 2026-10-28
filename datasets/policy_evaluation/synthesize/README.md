@@ -33,8 +33,8 @@ The default model is `gemini-4-argon` with `HIGH` thinking.
 From the repository root, after installing Lisa's dependencies:
 
 ```sh
-uv run --project lisa --with 'google-auth[requests]>=2,<3' python \
-  lisa/datasets/policy_evaluation/synthesize/annotate.py \
+uv run --project . --with 'google-auth[requests]>=2,<3' python \
+  datasets/policy_evaluation/synthesize/annotate.py \
   --limit 9 --live --output /tmp/lisa-annotation-verification
 ```
 

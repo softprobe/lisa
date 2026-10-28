@@ -6,12 +6,11 @@ import asyncio
 import mimetypes
 import os
 from contextlib import asynccontextmanager
-from html import escape
 from pathlib import Path, PurePosixPath
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, RedirectResponse, Response
+from fastapi.responses import FileResponse, Response
 
 from .bootstrap import build_services
 from .context import WorkspaceContext
@@ -31,7 +30,6 @@ async def lifespan(_app: FastAPI):
     slack_worker_task = None
     evaluation_worker_task = None
     checkpoint_worker_task = None
-    thelake_sampling_task = None
     policy_discovery_task = None
     if workspace_id:
         if services.session_evaluation_worker is not None:
@@ -41,10 +39,6 @@ async def lifespan(_app: FastAPI):
         if services.conversation_checkpoint_worker is not None:
             checkpoint_worker_task = asyncio.create_task(
                 services.conversation_checkpoint_worker.run_forever()
-            )
-        if services.thelake_sampling_worker is not None:
-            thelake_sampling_task = asyncio.create_task(
-                services.thelake_sampling_worker.run_forever()
             )
         if services.policy_discovery_worker is not None:
             policy_discovery_task = asyncio.create_task(
@@ -71,12 +65,6 @@ async def lifespan(_app: FastAPI):
             await checkpoint_worker_task
         except asyncio.CancelledError:
             pass
-    if thelake_sampling_task is not None:
-        thelake_sampling_task.cancel()
-        try:
-            await thelake_sampling_task
-        except asyncio.CancelledError:
-            pass
     if policy_discovery_task is not None:
         policy_discovery_task.cancel()
         try:
@@ -84,8 +72,6 @@ async def lifespan(_app: FastAPI):
         except asyncio.CancelledError:
             pass
     await services.slack_worker.shutdown()
-    if services.thelake_client is not None:
-        await asyncio.to_thread(services.thelake_client.close)
 
 
 app = FastAPI(title="Lisa Agent Runtime", version="0.1.0", lifespan=lifespan)
@@ -104,18 +90,15 @@ def _static_root() -> Path:
     return Path(os.getenv("LISA_STATIC_DIR", "/app/static")).resolve()
 
 
-@app.get("/lisa", include_in_schema=False)
-async def lisa_frontend_root() -> RedirectResponse:
-    return RedirectResponse("/lisa/", status_code=307)
-
-
-@app.get("/lisa/", include_in_schema=False)
+@app.get("/", include_in_schema=False)
 async def lisa_frontend_index() -> Response:
     return _lisa_frontend_file("index.html", spa_fallback=False)
 
 
-@app.get("/lisa/{asset_path:path}", include_in_schema=False)
+@app.get("/{asset_path:path}", include_in_schema=False)
 async def lisa_frontend_asset(asset_path: str) -> Response:
+    if asset_path.split("/", 1)[0] in {"v1", "internal", "slack", "docs", "redoc"}:
+        raise HTTPException(status_code=404)
     pure_path = PurePosixPath(asset_path)
     if pure_path.is_absolute() or any(part in {"", ".", ".."} for part in pure_path.parts):
         raise HTTPException(status_code=404)
@@ -132,10 +115,8 @@ def _lisa_frontend_file(path: str, *, spa_fallback: bool) -> Response:
             raise HTTPException(status_code=404)
         candidate = root / "index.html"
     if candidate.name == "index.html":
-        html = candidate.read_text(encoding="utf-8").replace('"__LISA_API_BASE_PATH__"', '"/v1"')
-        html = html.replace(
-            "__LISA_EXPLORER_URL__",
-            escape(os.getenv("LISA_EXPLORER_URL", "").strip(), quote=True),
+        html = candidate.read_text(encoding="utf-8").replace(
+            '"__LISA_API_BASE_PATH__"', '"/v1"'
         )
         return Response(html, media_type="text/html", headers={"Cache-Control": "no-cache"})
     return FileResponse(

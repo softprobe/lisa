@@ -72,9 +72,9 @@ def test_dispose_dogfood_stack_removes_run_data_and_keeps_llm_traces(tmp_path, m
     report_path = tmp_path / "report.json"
     report_path.write_text("{}\n", encoding="utf-8")
     compose_env.write_text(
-        "THELAKE_DOGFOOD_PROJECT_NAME=lisa-policy-eval-run-1\n"
-        "THELAKE_DOGFOOD_INSTANCE_ID=run-token-1\n"
-        "THELAKE_DOGFOOD_DATA_PATH=./warehouse/dogfood/lisa-policy-eval-run-1\n",
+        "LISA_DOGFOOD_PROJECT_NAME=lisa-policy-eval-run-1\n"
+        "LISA_DOGFOOD_INSTANCE_ID=run-token-1\n"
+        "LISA_DOGFOOD_DATA_PATH=./warehouse/dogfood/lisa-policy-eval-run-1\n",
         encoding="utf-8",
     )
     commands = []
@@ -119,9 +119,9 @@ def test_dispose_dogfood_stack_removes_run_data_and_keeps_llm_traces(tmp_path, m
     other_data = agent_data.parent / "lisa-policy-eval-run-2"
     other_data.mkdir()
     other_env.write_text(
-        "THELAKE_DOGFOOD_PROJECT_NAME=lisa-policy-eval-run-2\n"
-        "THELAKE_DOGFOOD_INSTANCE_ID=run-token-2\n"
-        "THELAKE_DOGFOOD_DATA_PATH=./warehouse/dogfood/lisa-policy-eval-run-2\n",
+        "LISA_DOGFOOD_PROJECT_NAME=lisa-policy-eval-run-2\n"
+        "LISA_DOGFOOD_INSTANCE_ID=run-token-2\n"
+        "LISA_DOGFOOD_DATA_PATH=./warehouse/dogfood/lisa-policy-eval-run-2\n",
         encoding="utf-8",
     )
     owned_resources = False
@@ -147,9 +147,9 @@ def test_dogfood_cleanup_rejects_symlinked_repository_paths(tmp_path):
     (repository / "warehouse").symlink_to(external, target_is_directory=True)
     env_file = external / "dogfood" / "lisa-policy-eval-run.env"
     env_file.write_text(
-        "THELAKE_DOGFOOD_PROJECT_NAME=lisa-policy-eval-run\n"
-        "THELAKE_DOGFOOD_INSTANCE_ID=run-token\n"
-        "THELAKE_DOGFOOD_DATA_PATH=./warehouse/dogfood/lisa-policy-eval-run\n",
+        "LISA_DOGFOOD_PROJECT_NAME=lisa-policy-eval-run\n"
+        "LISA_DOGFOOD_INSTANCE_ID=run-token\n"
+        "LISA_DOGFOOD_DATA_PATH=./warehouse/dogfood/lisa-policy-eval-run\n",
         encoding="utf-8",
     )
 
@@ -401,11 +401,11 @@ def test_dogfood_metadata_overrides_inherited_workspace_settings(tmp_path, monke
     env_file = tmp_path / "warehouse" / "dogfood" / "lisa-policy-eval-config-test.env"
     env_file.parent.mkdir(parents=True)
     env_file.write_text(
-        """THELAKE_DEFAULT_WORKSPACE_ID=22222222-2222-4222-8222-222222222222
-THELAKE_DOGFOOD_DB_PORT=55440
-THELAKE_DOGFOOD_PROJECT_NAME=lisa-policy-eval-config-test
-THELAKE_DOGFOOD_INSTANCE_ID=0123456789abcdef0123456789abcdef
-THELAKE_DOGFOOD_DATA_PATH=./warehouse/dogfood/lisa-policy-eval-config-test
+        """LISA_WORKSPACE_ID=22222222-2222-4222-8222-222222222222
+LISA_DOGFOOD_DB_PORT=55440
+LISA_DOGFOOD_PROJECT_NAME=lisa-policy-eval-config-test
+LISA_DOGFOOD_INSTANCE_ID=0123456789abcdef0123456789abcdef
+LISA_DOGFOOD_DATA_PATH=./warehouse/dogfood/lisa-policy-eval-config-test
 LISA_DATABASE_WRITER_PASSWORD=writer-secret
 LISA_DATABASE_READER_PASSWORD=reader-secret
 LISA_SERVICE_TOKEN=local-token

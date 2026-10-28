@@ -1,4 +1,4 @@
-"""Shared durable intake path for HTTP producers and Lisa's TheLake sampler."""
+"""Shared durable intake path for HTTP producers."""
 
 from __future__ import annotations
 

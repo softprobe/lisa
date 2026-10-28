@@ -12,7 +12,7 @@ import {
   type ToolCallMessagePartProps,
   type PartState,
 } from "@assistant-ui/react";
-import type { ExplorerApi, LisaActivity, LisaActivityDetail, LisaConversation, LisaFeedEntry, LisaMessage, LisaPolicyRecord, LisaPolicySuggestion, LisaProactiveUpdate, LisaQaObservation } from "./client";
+import type { LisaApi, LisaActivity, LisaActivityDetail, LisaConversation, LisaFeedEntry, LisaMessage, LisaPolicyRecord, LisaPolicySuggestion, LisaProactiveUpdate, LisaQaObservation } from "./client";
 import { LisaMessageContent } from "./LisaMessageContent";
 import { LisaProactiveVoice } from "./LisaProactiveVoice";
 import { LisaPolicySuggestionCard } from "./LisaPolicySuggestionCard";
@@ -204,7 +204,7 @@ function policyFindingSummary(entry: Pick<LisaFeedEntry, "summary" | "subtitle">
   return [entry.summary, entry.subtitle].find((value) => /^Policy violations? found:\s*.+$/i.test(value || "")) || undefined;
 }
 
-export function LisaView({ api, onShowSessions }: { api: ExplorerApi; onShowSessions?: () => void }) {
+export function LisaView({ api }: { api: LisaApi }) {
   const [conversations, setConversations] = useState<ConversationView[]>([]);
   const [activeId, setActiveId] = useState<string>();
   const [loading, setLoading] = useState(true);
@@ -664,7 +664,6 @@ export function LisaView({ api, onShowSessions }: { api: ExplorerApi; onShowSess
         <button type="button" aria-label="Findings" title="Findings" data-tooltip="Findings" aria-current={activeWorkspaceView === "findings" ? "page" : undefined} className={activeWorkspaceView === "findings" ? "active" : ""} onClick={() => selectWorkspaceView("findings")}><LisaIcon name="alert" size={21} /></button>
         <span />
         <button aria-label="Apps" disabled><LisaIcon name="apps" size={21} /></button>
-        {onShowSessions && <button aria-label="Sessions" onClick={onShowSessions}><LisaIcon name="analytics" size={21} /></button>}
         <button aria-label="Theme" disabled><LisaIcon name="theme" size={21} /></button>
         <div className="tle-lisa-rail-footer">
           <button aria-label="Download" disabled><LisaIcon name="download" size={21} /></button>

@@ -139,3 +139,32 @@ def test_stop_all_retries_after_failed_stop_and_surfaces_error(monkeypatch, tmp_
     lisa_env.stop_all_lisa_postgres()
     assert lisa_env._ACTIVE_POSTGRES == {}
     assert attempts["count"] == 2
+
+
+def test_drop_database_removes_the_owned_database_and_roles(monkeypatch):
+    statements = []
+
+    class Connection:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def execute(self, statement):
+            statements.append(statement.as_string())
+
+    monkeypatch.setattr(lisa_env.psycopg, "connect", lambda *_a, **_k: Connection())
+    database = lisa_env.LisaTestDatabase(
+        provision_url="postgresql://writer:secret@127.0.0.1:5432/lisa_test_123",
+        writer_url="postgresql://writer:secret@127.0.0.1:5432/lisa_test_123",
+        reader_url="postgresql://reader:secret@127.0.0.1:5432/lisa_test_123",
+    )
+
+    lisa_env.drop_lisa_test_database(database)
+
+    assert statements == [
+        'DROP DATABASE IF EXISTS "lisa_test_123" WITH (FORCE)',
+        'DROP ROLE IF EXISTS "lisa_test_123_writer"',
+        'DROP ROLE IF EXISTS "lisa_test_123_reader"',
+    ]

@@ -9,21 +9,21 @@
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Lisa — AI QA engineer for agent behavior" />
   <meta property="og:description" content="See how Lisa reacts to an agent mistake, checks the evidence, and helps your team prevent it from happening again." />
-  <link rel="canonical" href="https://thelake.softprobe.ai/lisa/" />
-  <link rel="icon" href="/lisa/lisa-mark.svg" type="image/svg+xml" />
+  <link rel="canonical" href="https://lisa.softprobe.ai/" />
+  <link rel="icon" href="/lisa-mark.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/lisa/styles.css?v=html-workflow-21" />
-  <script src="/lisa/story.js?v=html-workflow-5" defer></script>
+  <link rel="stylesheet" href="/styles.css?v=html-workflow-21" />
+  <script src="/story.js?v=html-workflow-5" defer></script>
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>
   <header class="topbar">
-    <a class="wordmark" href="/lisa/" aria-label="Lisa home"><img src="/lisa/lisa-mark.svg" alt="" width="34" height="34" /><span>lisa<span class="wordmark-dot">.</span></span></a>
+    <a class="wordmark" href="/" aria-label="Lisa home"><img src="/lisa-mark.svg" alt="" width="34" height="34" /><span>lisa<span class="wordmark-dot">.</span></span></a>
     <nav aria-label="Primary navigation">
       <a href="#story">How Lisa works</a>
-      <a class="nav-cta" href="https://github.com/softprobe/thelake/tree/main/lisa">Explore Lisa <span aria-hidden="true">↗</span></a>
+      <a class="nav-cta" href="https://github.com/softprobe/lisa">Explore Lisa <span aria-hidden="true">↗</span></a>
     </nav>
   </header>
 
@@ -36,7 +36,7 @@
           <p class="hero-lede">Lisa flags a clear mistake in one sampled run, explains what concerns her, and takes you to the evidence. When the same error appears across three separate runs, she can recommend a policy for your review.</p>
           <div class="hero-actions">
             <a class="button button-bright" href="#story-demo">See Lisa work <span aria-hidden="true">↓</span></a>
-            <a class="button button-quiet" href="https://github.com/softprobe/thelake/blob/main/README.md#local-development">Run Lisa locally</a>
+            <a class="button button-quiet" href="https://github.com/softprobe/lisa#local-development">Run Lisa locally</a>
           </div>
           <div class="hero-proof"><span>One run: Lisa reacts</span><span>Three runs: Lisa recommends</span></div>
         </div>
@@ -54,7 +54,7 @@
           </div>
           <aside class="lisa-comment" aria-label="Lisa's QA comment on the account deletion action">
             <div class="lisa-comment-header">
-              <span class="lisa-comment-avatar"><img src="/lisa/lisa-avatar.webp" alt="" width="34" height="34" /></span>
+              <span class="lisa-comment-avatar"><img src="/lisa-avatar.webp" alt="" width="34" height="34" /></span>
               <span class="lisa-comment-byline"><strong>Lisa</strong><small>QA comment</small></span>
               <span class="lisa-comment-mark" aria-hidden="true">!</span>
             </div>
@@ -93,10 +93,10 @@
         </div>
 
         <div class="demo-frame" aria-label="Recreated Lisa interface with synthetic example data">
-          <div class="demo-windowbar"><span class="window-dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="demo-workspace"><img src="/lisa/lisa-mark.svg" alt="" width="19" height="19" /> Lisa <span>/</span> QA workspace</span><span class="demo-synthetic"><i aria-hidden="true"></i> SYNTHETIC EXAMPLE</span></div>
+          <div class="demo-windowbar"><span class="window-dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="demo-workspace"><img src="/lisa-mark.svg" alt="" width="19" height="19" /> Lisa <span>/</span> QA workspace</span><span class="demo-synthetic"><i aria-hidden="true"></i> SYNTHETIC EXAMPLE</span></div>
           <div class="app-layout">
             <aside class="app-rail" aria-label="Lisa navigation">
-              <div class="rail-brand" aria-hidden="true"><img src="/lisa/lisa-mark.svg" alt="" width="22" height="22" /></div>
+              <div class="rail-brand" aria-hidden="true"><img src="/lisa-mark.svg" alt="" width="22" height="22" /></div>
               <span class="rail-icon rail-selected" aria-label="Chat">☰</span><span class="rail-icon" aria-label="Policies">◇</span><span class="rail-icon" aria-label="Activity">◷</span>
               <span class="rail-spacer"></span><span class="rail-avatar" aria-label="Workspace owner">B</span>
             </aside>
@@ -110,7 +110,7 @@
                     <div class="chat-bubble chat-customer"><span class="bubble-label">CUSTOMER</span><p>I need help with my account.</p></div>
                     <div class="event-chip"><span class="event-glyph" aria-hidden="true">↗</span><span><b>Account permanently deleted</b><small>Agent action · completed</small></span><span class="event-status">Done</span></div>
                     <div class="chat-bubble chat-agent"><span class="bubble-label">AGENT</span><p>Your account has been deleted.</p></div>
-                    <div class="lisa-message"><span class="lisa-avatar"><img src="/lisa/lisa-avatar.webp" alt="" width="25" height="25" /></span><div><b>Lisa</b><p>I noticed the agent permanently deleted the account without first asking the user to confirm. I can’t tell from this run whether that was what the user intended, so I’m flagging it for your review.</p><button class="evidence-link" type="button" data-go-step="2">Open run details <span aria-hidden="true">↗</span></button></div></div>
+                    <div class="lisa-message"><span class="lisa-avatar"><img src="/lisa-avatar.webp" alt="" width="25" height="25" /></span><div><b>Lisa</b><p>I noticed the agent permanently deleted the account without first asking the user to confirm. I can’t tell from this run whether that was what the user intended, so I’m flagging it for your review.</p><button class="evidence-link" type="button" data-go-step="2">Open run details <span aria-hidden="true">↗</span></button></div></div>
                     <div class="chat-bubble chat-owner"><p>I see what you mean. Can you show me what led to that action?</p></div>
                   </div>
                   <aside class="context-card"><span class="context-eyebrow">LISA'S FIRST LOOK</span><strong>One run. One clear concern.</strong><p>Lisa reacts to this sample now. She doesn’t need to wait for the same error to happen again.</p><div class="context-rule"><span class="mini-check">✓</span> Observation ready to review</div></aside>
@@ -124,13 +124,13 @@
                     <div class="review-event review-event-alert"><span class="event-index">02</span><div><small>THE ACTION</small><p>Deleted the account permanently</p><span class="event-subtext">No confirmation was requested first.</span></div></div>
                     <div class="review-event"><span class="event-index">03</span><div><small>THE OUTCOME</small><p>“Your account has been deleted.”</p></div></div>
                   </div>
-                  <aside class="context-card context-lisa"><span class="lisa-avatar"><img src="/lisa/lisa-avatar.webp" alt="" width="25" height="25" /></span><span class="context-eyebrow">LISA'S READ</span><strong>The user asked for help. The agent chose a permanent action.</strong><p>That’s enough to warrant a closer look. One run can show an obvious mistake, but it can’t tell us whether this is a repeated pattern.</p></aside>
+                  <aside class="context-card context-lisa"><span class="lisa-avatar"><img src="/lisa-avatar.webp" alt="" width="25" height="25" /></span><span class="context-eyebrow">LISA'S READ</span><strong>The user asked for help. The agent chose a permanent action.</strong><p>That’s enough to warrant a closer look. One run can show an obvious mistake, but it can’t tell us whether this is a repeated pattern.</p></aside>
                 </section>
 
                 <section class="step-panel" id="step-panel-3" role="tabpanel" aria-labelledby="step-tab-3" tabindex="0" hidden>
                   <div class="chat-scene chat-scene-short">
                     <div class="chat-date">AFTER THREE SEPARATE ERROR RUNS</div>
-                    <div class="lisa-message lisa-message-first"><span class="lisa-avatar"><img src="/lisa/lisa-avatar.webp" alt="" width="25" height="25" /></span><div><b>Lisa</b><p>The same missing confirmation appeared in three separate runs. I drafted a rule so we can decide how the agent should handle this.</p></div></div>
+                    <div class="lisa-message lisa-message-first"><span class="lisa-avatar"><img src="/lisa-avatar.webp" alt="" width="25" height="25" /></span><div><b>Lisa</b><p>The same missing confirmation appeared in three separate runs. I drafted a rule so we can decide how the agent should handle this.</p></div></div>
                     <article class="policy-card">
                       <div class="policy-card-heading"><span class="policy-status status-pending"><i aria-hidden="true"></i> Policy recommendation</span><span class="run-count">3 SUPPORTING RUNS</span></div>
                       <h3>Confirm before deleting an account</h3>
@@ -149,7 +149,7 @@
                 <section class="step-panel" id="step-panel-4" role="tabpanel" aria-labelledby="step-tab-4" tabindex="0" hidden>
                   <div class="chat-scene chat-scene-short">
                     <div class="chat-date">OWNER REVIEW</div>
-                    <div class="lisa-message lisa-message-first"><span class="lisa-avatar"><img src="/lisa/lisa-avatar.webp" alt="" width="25" height="25" /></span><div><b>Lisa</b><p>You approved the confirmation rule. It’s active now, and I’ll check new runs against it.</p></div></div>
+                    <div class="lisa-message lisa-message-first"><span class="lisa-avatar"><img src="/lisa-avatar.webp" alt="" width="25" height="25" /></span><div><b>Lisa</b><p>You approved the confirmation rule. It’s active now, and I’ll check new runs against it.</p></div></div>
                     <article class="policy-card policy-approved">
                       <div class="policy-card-heading"><span class="policy-status status-active"><i aria-hidden="true"></i> Active policy · P1.1</span><span class="owner-check"><span>✓</span> APPROVED BY YOU</span></div>
                       <h3>Confirm before deleting an account</h3>
@@ -166,7 +166,7 @@
                     <div class="chat-date">A LATER RUN · POLICY CHECK</div>
                     <div class="chat-bubble chat-customer"><span class="bubble-label">CUSTOMER</span><p>Can you help me with my account?</p></div>
                     <div class="event-chip event-chip-alert"><span class="event-glyph" aria-hidden="true">↗</span><span><b>Account permanently deleted</b><small>Agent action · completed</small></span><span class="event-status event-status-alert">Review</span></div>
-                    <div class="lisa-message lisa-message-first"><span class="lisa-avatar"><img src="/lisa/lisa-avatar.webp" alt="" width="25" height="25" /></span><div><b>Lisa</b><p>This run deleted the account without first asking the user to confirm. That conflicts with the rule you approved, so I’ve flagged the run for review.</p></div></div>
+                    <div class="lisa-message lisa-message-first"><span class="lisa-avatar"><img src="/lisa-avatar.webp" alt="" width="25" height="25" /></span><div><b>Lisa</b><p>This run deleted the account without first asking the user to confirm. That conflicts with the rule you approved, so I’ve flagged the run for review.</p></div></div>
                   </div>
                   <aside class="context-card context-finding"><span class="context-eyebrow">POLICY FINDING</span><strong>Confirmation was missing.</strong><p>The evaluated run is linked to the active policy and its evidence.</p><div class="finding-detail"><span>Expected</span><b>Ask before deleting</b><span>Observed</span><b>Deleted without asking</b></div></aside>
                 </section>
@@ -192,11 +192,11 @@
       <p class="eyebrow">Open source · Self-hostable</p>
       <h2>Give your agent<br />a QA engineer.</h2>
       <p>Explore Lisa’s code and run the service locally with your own model configuration.</p>
-      <div class="hero-actions closing-actions"><a class="button button-bright" href="https://github.com/softprobe/thelake/blob/main/README.md#local-development">Run Lisa locally <span aria-hidden="true">↗</span></a><a class="button button-quiet" href="https://github.com/softprobe/thelake/tree/main/lisa">Browse Lisa source</a></div>
+      <div class="hero-actions closing-actions"><a class="button button-bright" href="https://github.com/softprobe/lisa#local-development">Run Lisa locally <span aria-hidden="true">↗</span></a><a class="button button-quiet" href="https://github.com/softprobe/lisa">Browse Lisa source</a></div>
       <p class="synthetic-disclosure">The walkthrough is an illustrative HTML recreation using synthetic example data. It does not depict customer activity.</p>
     </section>
   </main>
 
-  <footer class="footer"><a class="wordmark" href="/lisa/"><img src="/lisa/lisa-mark.svg" alt="" width="28" height="28" /><span>lisa<span class="wordmark-dot">.</span></span></a><span>Independent AI QA service · Open source</span><a href="https://github.com/softprobe/thelake/tree/main/lisa">GitHub <span aria-hidden="true">↗</span></a></footer>
+  <footer class="footer"><a class="wordmark" href="/"><img src="/lisa-mark.svg" alt="" width="28" height="28" /><span>lisa<span class="wordmark-dot">.</span></span></a><span>Independent AI QA service · Open source</span><a href="https://github.com/softprobe/lisa">GitHub <span aria-hidden="true">↗</span></a></footer>
 </body>
 </html>

@@ -1,6 +1,6 @@
 """Versioned task dataset for Lisa's activity-management agent benchmark.
 
-Offline harness only — see ``datasets`` package docs. Tied to labeled resources; runners live in ``lisa/benchmark``.
+Offline harness only — see ``datasets`` package docs. Tied to labeled resources; runners live in ``benchmark``.
 """
 
 from __future__ import annotations

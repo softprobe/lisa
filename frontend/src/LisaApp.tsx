@@ -1,18 +1,17 @@
 import { useMemo } from "react";
-import { ExplorerApi, type ExplorerConfig } from "./client";
+import { LisaApi, type LisaConfig } from "./client";
 import { LisaView } from "./LisaView";
-import "./style.css";
+import "./app.css";
 
-export type LisaAppProps = { config: ExplorerConfig; explorerUrl?: string };
+export type LisaAppProps = { config?: LisaConfig };
 
-export function LisaApp({ config, explorerUrl }: LisaAppProps) {
-  const api = useMemo(() => new ExplorerApi(config), [config]);
+export function LisaApp({ config = {} }: LisaAppProps) {
+  const api = useMemo(() => new LisaApi(config), [config]);
   return (
-    <main className="thelake-explorer lisa-app">
+    <main className="lisa-app">
       <LisaView
         key={config.chatStorageKey ?? "workspace-unspecified"}
         api={api}
-        onShowSessions={explorerUrl ? () => { window.location.assign(explorerUrl); } : undefined}
       />
     </main>
   );

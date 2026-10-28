@@ -47,26 +47,26 @@ os.chmod(path, 0o600)
 PY
 
 export GOOGLE_API_KEY="$api_key"
-export THELAKE_DEFAULT_WORKSPACE_ID="${THELAKE_DEFAULT_WORKSPACE_ID:-550e8400-e29b-41d4-a716-446655440000}"
-export THELAKE_DOGFOOD_PROJECT_NAME="${THELAKE_DOGFOOD_PROJECT_NAME:-}"
-[[ "$THELAKE_DOGFOOD_PROJECT_NAME" =~ ^lisa-policy-eval-[a-z0-9][a-z0-9_-]*$ ]] || {
-  echo "Set THELAKE_DOGFOOD_PROJECT_NAME to a fresh lisa-policy-eval-* run name; Dogfood is disposable QA, not a development environment." >&2
+export LISA_WORKSPACE_ID="${LISA_WORKSPACE_ID:-550e8400-e29b-41d4-a716-446655440000}"
+export LISA_DOGFOOD_PROJECT_NAME="${LISA_DOGFOOD_PROJECT_NAME:-}"
+[[ "$LISA_DOGFOOD_PROJECT_NAME" =~ ^lisa-policy-eval-[a-z0-9][a-z0-9_-]*$ ]] || {
+  echo "Set LISA_DOGFOOD_PROJECT_NAME to a fresh lisa-policy-eval-* run name; Dogfood is disposable QA, not a development environment." >&2
   exit 1
 }
-export THELAKE_DOGFOOD_INSTANCE_ID="${THELAKE_DOGFOOD_INSTANCE_ID:-$(python3 -c 'import secrets; print(secrets.token_hex(16))')}"
-[[ "$THELAKE_DOGFOOD_INSTANCE_ID" =~ ^[a-f0-9]{32}$ ]] || {
-  echo "THELAKE_DOGFOOD_INSTANCE_ID must be 32 lowercase hexadecimal characters." >&2
+export LISA_DOGFOOD_INSTANCE_ID="${LISA_DOGFOOD_INSTANCE_ID:-$(python3 -c 'import secrets; print(secrets.token_hex(16))')}"
+[[ "$LISA_DOGFOOD_INSTANCE_ID" =~ ^[a-f0-9]{32}$ ]] || {
+  echo "LISA_DOGFOOD_INSTANCE_ID must be 32 lowercase hexadecimal characters." >&2
   exit 1
 }
-export THELAKE_DOGFOOD_DATA_PATH="${THELAKE_DOGFOOD_DATA_PATH:-./warehouse/dogfood/${THELAKE_DOGFOOD_PROJECT_NAME}}"
-export THELAKE_DOGFOOD_ENV_FILE="${THELAKE_DOGFOOD_ENV_FILE:-warehouse/dogfood/${THELAKE_DOGFOOD_PROJECT_NAME}.env}"
-[[ "$THELAKE_DOGFOOD_DATA_PATH" == "./warehouse/dogfood/${THELAKE_DOGFOOD_PROJECT_NAME}" ]] || {
+export LISA_DOGFOOD_DATA_PATH="${LISA_DOGFOOD_DATA_PATH:-./warehouse/dogfood/${LISA_DOGFOOD_PROJECT_NAME}}"
+export LISA_DOGFOOD_ENV_FILE="${LISA_DOGFOOD_ENV_FILE:-warehouse/dogfood/${LISA_DOGFOOD_PROJECT_NAME}.env}"
+[[ "$LISA_DOGFOOD_DATA_PATH" == "./warehouse/dogfood/${LISA_DOGFOOD_PROJECT_NAME}" ]] || {
   echo "Dogfood data path must be the run-owned warehouse/dogfood/<project> directory." >&2; exit 1;
 }
-[[ "$THELAKE_DOGFOOD_ENV_FILE" == "warehouse/dogfood/${THELAKE_DOGFOOD_PROJECT_NAME}.env" ]] || {
+[[ "$LISA_DOGFOOD_ENV_FILE" == "warehouse/dogfood/${LISA_DOGFOOD_PROJECT_NAME}.env" ]] || {
   echo "Dogfood environment file must be named after the run-owned project." >&2; exit 1;
 }
-if [[ -L warehouse || -L warehouse/dogfood || -L "$THELAKE_DOGFOOD_DATA_PATH" || -e "$THELAKE_DOGFOOD_DATA_PATH" || -e "$THELAKE_DOGFOOD_ENV_FILE" ]]; then
+if [[ -L warehouse || -L warehouse/dogfood || -L "$LISA_DOGFOOD_DATA_PATH" || -e "$LISA_DOGFOOD_DATA_PATH" || -e "$LISA_DOGFOOD_ENV_FILE" ]]; then
   echo "Refusing to reuse existing or symlinked Lisa dogfood data." >&2; exit 1
 fi
 
@@ -81,54 +81,54 @@ for port in range(int(sys.argv[1]), int(sys.argv[1]) + 40):
 else: raise SystemExit("No free local port in the Lisa dogfood range.")
 PY
 }
-export THELAKE_DOGFOOD_DB_PORT="${THELAKE_DOGFOOD_DB_PORT:-$(select_port 55432)}"
-export THELAKE_DOGFOOD_LISA_PORT="${THELAKE_DOGFOOD_LISA_PORT:-$(select_port 18082)}"
+export LISA_DOGFOOD_DB_PORT="${LISA_DOGFOOD_DB_PORT:-$(select_port 55432)}"
+export LISA_DOGFOOD_LISA_PORT="${LISA_DOGFOOD_LISA_PORT:-$(select_port 18082)}"
 export LISA_DATABASE_WRITER_PASSWORD="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
 export LISA_DATABASE_READER_PASSWORD="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
 export LISA_SERVICE_TOKEN="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
 
 mkdir -p warehouse/dogfood
-existing="$(docker ps --all --quiet --filter "label=com.docker.compose.project=$THELAKE_DOGFOOD_PROJECT_NAME")$(docker volume ls --quiet --filter "label=com.docker.compose.project=$THELAKE_DOGFOOD_PROJECT_NAME")$(docker network ls --quiet --filter "label=com.docker.compose.project=$THELAKE_DOGFOOD_PROJECT_NAME")"
-[[ -z "$existing" ]] || { echo "Refusing to reuse Docker resources for $THELAKE_DOGFOOD_PROJECT_NAME." >&2; exit 1; }
-(umask 077; cat > "$THELAKE_DOGFOOD_ENV_FILE" <<ENV
-THELAKE_DEFAULT_WORKSPACE_ID=$THELAKE_DEFAULT_WORKSPACE_ID
-THELAKE_DOGFOOD_PROJECT_NAME=$THELAKE_DOGFOOD_PROJECT_NAME
-THELAKE_DOGFOOD_INSTANCE_ID=$THELAKE_DOGFOOD_INSTANCE_ID
-THELAKE_DOGFOOD_DATA_PATH=$THELAKE_DOGFOOD_DATA_PATH
-THELAKE_DOGFOOD_DB_PORT=$THELAKE_DOGFOOD_DB_PORT
-THELAKE_DOGFOOD_LISA_PORT=$THELAKE_DOGFOOD_LISA_PORT
+existing="$(docker ps --all --quiet --filter "label=com.docker.compose.project=$LISA_DOGFOOD_PROJECT_NAME")$(docker volume ls --quiet --filter "label=com.docker.compose.project=$LISA_DOGFOOD_PROJECT_NAME")$(docker network ls --quiet --filter "label=com.docker.compose.project=$LISA_DOGFOOD_PROJECT_NAME")"
+[[ -z "$existing" ]] || { echo "Refusing to reuse Docker resources for $LISA_DOGFOOD_PROJECT_NAME." >&2; exit 1; }
+(umask 077; cat > "$LISA_DOGFOOD_ENV_FILE" <<ENV
+LISA_WORKSPACE_ID=$LISA_WORKSPACE_ID
+LISA_DOGFOOD_PROJECT_NAME=$LISA_DOGFOOD_PROJECT_NAME
+LISA_DOGFOOD_INSTANCE_ID=$LISA_DOGFOOD_INSTANCE_ID
+LISA_DOGFOOD_DATA_PATH=$LISA_DOGFOOD_DATA_PATH
+LISA_DOGFOOD_DB_PORT=$LISA_DOGFOOD_DB_PORT
+LISA_DOGFOOD_LISA_PORT=$LISA_DOGFOOD_LISA_PORT
 LISA_DATABASE_WRITER_PASSWORD=$LISA_DATABASE_WRITER_PASSWORD
 LISA_DATABASE_READER_PASSWORD=$LISA_DATABASE_READER_PASSWORD
 LISA_SERVICE_TOKEN=$LISA_SERVICE_TOKEN
 ENV
 )
-chmod 600 "$THELAKE_DOGFOOD_ENV_FILE"
-compose=(docker compose --env-file "$local_env_file" --env-file "$THELAKE_DOGFOOD_ENV_FILE" --project-name "$THELAKE_DOGFOOD_PROJECT_NAME" --file examples/lisa-dogfood/compose.yaml)
+chmod 600 "$LISA_DOGFOOD_ENV_FILE"
+compose=(docker compose --env-file "$local_env_file" --env-file "$LISA_DOGFOOD_ENV_FILE" --project-name "$LISA_DOGFOOD_PROJECT_NAME" --file examples/lisa-dogfood/compose.yaml)
 "${compose[@]}" up --build --detach postgres
 
 echo "Waiting for Lisa's PostgreSQL..."
 for _ in $(seq 1 60); do
-  if "${compose[@]}" exec --no-TTY postgres pg_isready -U ducklake -d postgres >/dev/null 2>&1; then break; fi
+  if "${compose[@]}" exec --no-TTY postgres pg_isready -U lisa -d lisa >/dev/null 2>&1; then break; fi
   sleep 1
 done
-"${compose[@]}" exec --no-TTY postgres pg_isready -U ducklake -d postgres >/dev/null 2>&1 || {
+"${compose[@]}" exec --no-TTY postgres pg_isready -U lisa -d lisa >/dev/null 2>&1 || {
   "${compose[@]}" logs postgres; echo "PostgreSQL did not become ready." >&2; exit 1;
 }
 
-LISA_DATABASE_PROVISION_URL="postgresql://ducklake:ducklake@127.0.0.1:${THELAKE_DOGFOOD_DB_PORT}/lisa" \
-LISA_WORKSPACE_ID="$THELAKE_DEFAULT_WORKSPACE_ID" \
+LISA_DATABASE_PROVISION_URL="postgresql://lisa:lisa@127.0.0.1:${LISA_DOGFOOD_DB_PORT}/lisa" \
+LISA_WORKSPACE_ID="$LISA_WORKSPACE_ID" \
 LISA_DATABASE_WRITER_PASSWORD="$LISA_DATABASE_WRITER_PASSWORD" \
 LISA_DATABASE_READER_PASSWORD="$LISA_DATABASE_READER_PASSWORD" \
-LISA_DATABASE_RECREATE=1 uv run --project lisa python lisa/scripts/provision_lisa.py
+LISA_DATABASE_RECREATE=1 uv run --project . python scripts/provision_lisa.py
 "${compose[@]}" up --build --detach lisa
 for _ in $(seq 1 90); do
-  if curl --silent --fail "http://127.0.0.1:${THELAKE_DOGFOOD_LISA_PORT}/health" >/dev/null; then break; fi
+  if curl --silent --fail "http://127.0.0.1:${LISA_DOGFOOD_LISA_PORT}/health" >/dev/null; then break; fi
   sleep 1
 done
-curl --silent --fail "http://127.0.0.1:${THELAKE_DOGFOOD_LISA_PORT}/health" >/dev/null || {
+curl --silent --fail "http://127.0.0.1:${LISA_DOGFOOD_LISA_PORT}/health" >/dev/null || {
   "${compose[@]}" logs lisa; echo "Lisa did not become ready." >&2; exit 1;
 }
-mkdir -p "$THELAKE_DOGFOOD_DATA_PATH"
-printf 'http://127.0.0.1:%s\n' "$THELAKE_DOGFOOD_LISA_PORT" > "warehouse/dogfood/${THELAKE_DOGFOOD_PROJECT_NAME}.lisa_api_url"
-echo "Standalone Lisa dogfood is ready: http://127.0.0.1:${THELAKE_DOGFOOD_LISA_PORT}/lisa/"
-echo "Push sessions to http://127.0.0.1:${THELAKE_DOGFOOD_LISA_PORT}/internal/v1/session-traces"
+mkdir -p "$LISA_DOGFOOD_DATA_PATH"
+printf 'http://127.0.0.1:%s\n' "$LISA_DOGFOOD_LISA_PORT" > "warehouse/dogfood/${LISA_DOGFOOD_PROJECT_NAME}.lisa_api_url"
+echo "Standalone Lisa dogfood is ready: http://127.0.0.1:${LISA_DOGFOOD_LISA_PORT}/"
+echo "Push sessions to http://127.0.0.1:${LISA_DOGFOOD_LISA_PORT}/internal/v1/session-traces"

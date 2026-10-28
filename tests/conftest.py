@@ -1,1 +1,1 @@
-"""Runtime pytest entry; shared fixtures live in ``lisa/conftest.py``."""
+"""Runtime pytest entry; shared fixtures live in ``conftest.py``."""

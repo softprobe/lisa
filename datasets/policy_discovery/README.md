@@ -36,7 +36,7 @@ a release-quality threshold.
 Run the real provider path with an isolated output file:
 
 ```sh
-uv run --project lisa --env-file .env python lisa/scripts/evaluate_policy_discovery_dataset.py \
+uv run --project . --env-file .env python scripts/evaluate_policy_discovery_dataset.py \
   --live --output /tmp/lisa-policy-discovery-report.json
 ```
 

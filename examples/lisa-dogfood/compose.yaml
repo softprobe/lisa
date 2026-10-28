@@ -2,15 +2,15 @@ services:
   postgres:
     image: ghcr.io/pgmq/pg17-pgmq:v1.10.0
     labels:
-      io.arex.lisa.dogfood-instance: ${THELAKE_DOGFOOD_INSTANCE_ID:?dogfood script must set an instance ID}
+      io.arex.lisa.dogfood-instance: ${LISA_DOGFOOD_INSTANCE_ID:?dogfood script must set an instance ID}
     environment:
-      POSTGRES_USER: ducklake
-      POSTGRES_PASSWORD: ducklake
-      POSTGRES_DB: ducklake
+      POSTGRES_USER: lisa
+      POSTGRES_PASSWORD: lisa
+      POSTGRES_DB: lisa
     ports:
-      - "127.0.0.1:${THELAKE_DOGFOOD_DB_PORT:-55432}:5432"
+      - "127.0.0.1:${LISA_DOGFOOD_DB_PORT:-55432}:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ducklake -d ducklake"]
+      test: ["CMD-SHELL", "pg_isready -U lisa -d lisa"]
       interval: 2s
       timeout: 3s
       retries: 30
@@ -20,9 +20,9 @@ services:
   lisa:
     build:
       context: ../..
-      dockerfile: lisa/Dockerfile
+      dockerfile: Dockerfile
     labels:
-      io.arex.lisa.dogfood-instance: ${THELAKE_DOGFOOD_INSTANCE_ID:?dogfood script must set an instance ID}
+      io.arex.lisa.dogfood-instance: ${LISA_DOGFOOD_INSTANCE_ID:?dogfood script must set an instance ID}
     environment:
       LISA_SKILL_DIR: /app/skills
       GOOGLE_API_KEY: ${GOOGLE_API_KEY:-${GEMINI_API_KEY:?Set GOOGLE_API_KEY or GEMINI_API_KEY before starting the dogfood}}
@@ -31,7 +31,7 @@ services:
       LISA_GEMINI_THINKING_LEVEL: ${LISA_GEMINI_THINKING_LEVEL:-low}
       LISA_MODEL: ${LISA_MODEL:-gemini/gemini-3.8-flash}
       LISA_DATA_DIR: /var/lib/lisa/workspaces
-      LISA_WORKSPACE_ID: ${THELAKE_DEFAULT_WORKSPACE_ID:-550e8400-e29b-41d4-a716-446655440000}
+      LISA_WORKSPACE_ID: ${LISA_WORKSPACE_ID:-550e8400-e29b-41d4-a716-446655440000}
       LISA_DATABASE_URL: postgresql://lisa_writer:${LISA_DATABASE_WRITER_PASSWORD}@postgres:5432/lisa
       LISA_DATABASE_READ_URL: postgresql://lisa_reader:${LISA_DATABASE_READER_PASSWORD}@postgres:5432/lisa
       LISA_SERVICE_TOKEN: ${LISA_SERVICE_TOKEN:?dogfood script must set a Lisa service token}
@@ -49,15 +49,15 @@ services:
       LISA_OWNER_USER_IDS: ${LISA_OWNER_USER_IDS:-}
       LISA_SLACK_ACTIVITY_THREAD_TS: ${LISA_SLACK_ACTIVITY_THREAD_TS:-}
     ports:
-      - "127.0.0.1:${THELAKE_DOGFOOD_LISA_PORT:-18082}:8082"
+      - "127.0.0.1:${LISA_DOGFOOD_LISA_PORT:-18082}:8082"
     volumes:
       - lisa-data:/var/lib/lisa
 
   refund-agent:
     profiles: [demo-agent]
     labels:
-      io.arex.lisa.dogfood-instance: ${THELAKE_DOGFOOD_INSTANCE_ID:?dogfood script must set an instance ID}
-    network_mode: ${THELAKE_DOGFOOD_AGENT_NETWORK:-bridge}
+      io.arex.lisa.dogfood-instance: ${LISA_DOGFOOD_INSTANCE_ID:?dogfood script must set an instance ID}
+    network_mode: ${LISA_DOGFOOD_AGENT_NETWORK:-bridge}
     build:
       context: ./agent
     environment:
@@ -67,12 +67,12 @@ services:
 volumes:
   postgres-data:
     labels:
-      io.arex.lisa.dogfood-instance: ${THELAKE_DOGFOOD_INSTANCE_ID:?dogfood script must set an instance ID}
+      io.arex.lisa.dogfood-instance: ${LISA_DOGFOOD_INSTANCE_ID:?dogfood script must set an instance ID}
   lisa-data:
     labels:
-      io.arex.lisa.dogfood-instance: ${THELAKE_DOGFOOD_INSTANCE_ID:?dogfood script must set an instance ID}
+      io.arex.lisa.dogfood-instance: ${LISA_DOGFOOD_INSTANCE_ID:?dogfood script must set an instance ID}
 
 networks:
   default:
     labels:
-      io.arex.lisa.dogfood-instance: ${THELAKE_DOGFOOD_INSTANCE_ID:?dogfood script must set an instance ID}
+      io.arex.lisa.dogfood-instance: ${LISA_DOGFOOD_INSTANCE_ID:?dogfood script must set an instance ID}

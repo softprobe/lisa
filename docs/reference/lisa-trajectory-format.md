@@ -9,7 +9,7 @@ may use a different notation.
 
 The formatter creates a compact, redacted view for the judge. It does not
 change stored trajectory events or the policy triage request's full-ID format. The
-implementation is in `lisa/evaluation/prompt.py`.
+implementation is in `src/lisa/evaluation/prompt.py`.
 
 Stored events preserve a source timestamp when telemetry provides one. Missing
 timestamps are `null`; Lisa does not invent a wall-clock value. Event sequence
@@ -68,7 +68,7 @@ conclusion. Stored trajectories and upstream completeness checks are unchanged.
 
 ## Contract tests
 
-`lisa/tests/test_tool_result_format.py` checks the tool-line grammar, paired
+`tests/test_tool_result_format.py` checks the tool-line grammar, paired
 calls and results, errors, JSON values, ambiguous links, and exact clipping.
 `test_trajectory_prompt.py` covers message formatting, escaping, redaction,
 empty values, and truncation. `test_prompt_citations.py` and

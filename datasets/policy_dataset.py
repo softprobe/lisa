@@ -1,6 +1,6 @@
 """Labeled policy-evaluation dataset inputs and annotations.
 
-Offline harness only — see ``datasets`` package docs. Tied to labeled resources; runners live in ``lisa/benchmark``.
+Offline harness only — see ``datasets`` package docs. Tied to labeled resources; runners live in ``benchmark``.
 
 See ``docs/architecture/lisa-terms.md`` for canonical runtime identity. The
 dataset stores trajectories by ``session_id`` and annotations by

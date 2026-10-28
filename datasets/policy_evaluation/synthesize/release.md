@@ -115,7 +115,7 @@ established emergency exceptions. Do not convert this known coverage gap into
 confident labels.
 
 For production-path Lisa evaluation, use the `run-lisa-policy-evaluation` skill
-and `lisa/scripts/evaluate_policy_dataset.py`. That runner loads this complete
+and `scripts/evaluate_policy_dataset.py`. That runner loads this complete
 policy catalog through Lisa's policy-management service into a disposable
 PostgreSQL workspace, ingests trajectories into TheLake, and invokes Lisa's
 `EvaluationService`.

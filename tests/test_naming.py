@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 PROJECT = Path(__file__).parents[1]
-REPOSITORY = PROJECT.parent
+REPOSITORY = PROJECT
 
 
 def test_lisa_has_one_name_for_project_package_and_runtime():
@@ -24,7 +24,7 @@ def test_lisa_has_one_name_for_project_package_and_runtime():
 
 
 def test_compose_uses_the_lisa_service_name():
-    root_compose = (REPOSITORY / "docker-compose.yml").read_text(encoding="utf-8")
+    root_compose = (REPOSITORY / "compose.yaml").read_text(encoding="utf-8")
     dogfood_compose = (REPOSITORY / "examples" / "lisa-dogfood" / "compose.yaml").read_text(
         encoding="utf-8"
     )
@@ -34,10 +34,7 @@ def test_compose_uses_the_lisa_service_name():
 
 
 def test_documentation_pages_use_lowercase_kebab_case():
-    roots = (
-        REPOSITORY / "docs",
-        REPOSITORY / "tests" / "compat" / "grafana" / "browser",
-    )
+    roots = (REPOSITORY / "docs",)
     pages = [page for root in roots for page in root.rglob("*.md")]
     exceptions = {"README.md", "POLICY.md", "SKILL.md", "AGENTS.md", "CLAUDE.md"}
     pattern = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*\.md")
@@ -50,20 +47,6 @@ def test_documentation_pages_use_lowercase_kebab_case():
     ]
 
     assert invalid == []
-
-
-def test_playwright_files_use_kebab_case_and_typescript_modules_use_camel_case():
-    browser_tests = REPOSITORY / "tests" / "compat" / "grafana" / "browser"
-    expected = {
-        "e2e-all-query-features.spec.ts",
-        "e2e-explorer-ui.spec.ts",
-        "e2e-grafana-dashboards.spec.ts",
-        "e2e-grafana-explore.spec.ts",
-        "e2e-ingestion.spec.ts",
-        "queryFeatures.ts",
-    }
-
-    assert {path.name for path in browser_tests.iterdir() if path.is_file()} >= expected
 
 
 def test_lisa_python_modules_and_packages_use_snake_case():

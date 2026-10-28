@@ -1,0 +1,70 @@
+services:
+  lisa-postgres:
+    image: ghcr.io/pgmq/pg18-pgmq:v1.10.0
+    environment:
+      POSTGRES_USER: lisa_admin
+      POSTGRES_PASSWORD: ${LISA_DATABASE_ADMIN_PASSWORD:-lisa_admin_local}
+      POSTGRES_DB: postgres
+    ports:
+      - "127.0.0.1:${LISA_POSTGRES_PORT:-55433}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lisa_admin -d postgres"]
+      interval: 2s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - lisa-postgres-data:/var/lib/postgresql
+
+  lisa-provision:
+    build: .
+    entrypoint: ["python", "/app/provision_lisa.py"]
+    environment:
+      LISA_DATABASE_PROVISION_URL: postgresql://lisa_admin:${LISA_DATABASE_ADMIN_PASSWORD:-lisa_admin_local}@lisa-postgres:5432/lisa
+      LISA_DATABASE_WRITER_PASSWORD: ${LISA_DATABASE_WRITER_PASSWORD:-lisa_writer_local}
+      LISA_DATABASE_READER_PASSWORD: ${LISA_DATABASE_READER_PASSWORD:-lisa_reader_local}
+      LISA_WORKSPACE_ID: ${LISA_WORKSPACE_ID:-550e8400-e29b-41d4-a716-446655440000}
+    depends_on:
+      lisa-postgres:
+        condition: service_healthy
+    restart: "no"
+
+  lisa:
+    build: .
+    environment:
+      LISA_SKILL_DIR: /app/skills
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      LISA_MODEL: ${LISA_MODEL:-gemini/gemini-3.8-flash}
+      GEMINI_MODEL_NAME: ${GEMINI_MODEL_NAME:-gemini-3.8-flash}
+      LISA_WORKSPACE_ID: ${LISA_WORKSPACE_ID:-550e8400-e29b-41d4-a716-446655440000}
+      LISA_DATABASE_URL: postgresql://lisa_writer:${LISA_DATABASE_WRITER_PASSWORD:-lisa_writer_local}@lisa-postgres:5432/lisa
+      LISA_DATABASE_READ_URL: postgresql://lisa_reader:${LISA_DATABASE_READER_PASSWORD:-lisa_reader_local}@lisa-postgres:5432/lisa
+      LISA_SERVICE_TOKEN: ${LISA_SERVICE_TOKEN:-lisa_local_service_token}
+      LISA_LOCAL_ANONYMOUS: "1"
+      LISA_OWNER_USER_IDS: ${LISA_OWNER_USER_IDS:-local}
+      LISA_DATA_DIR: /var/lib/lisa/workspaces
+      LISA_AGENT_WORKSPACE_ROOT: /var/lib/lisa/agent-workspace
+      LISA_CORS_ORIGINS: ${LISA_CORS_ORIGINS:-http://127.0.0.1:8082,http://localhost:8082}
+      SOFTPROBE_ASSERTION_HMAC_SECRET: ${SOFTPROBE_ASSERTION_HMAC_SECRET:-}
+      LISA_SLACK_SIGNING_SECRET: ${LISA_SLACK_SIGNING_SECRET:-}
+      LISA_SLACK_TEAM_ID: ${LISA_SLACK_TEAM_ID:-}
+      LISA_SLACK_ALLOWED_USERS: ${LISA_SLACK_ALLOWED_USERS:-}
+      LISA_SLACK_ALLOWED_CHANNELS: ${LISA_SLACK_ALLOWED_CHANNELS:-}
+      LISA_SLACK_BOT_TOKEN: ${LISA_SLACK_BOT_TOKEN:-}
+      LISA_SLACK_CHANNEL_ID: ${LISA_SLACK_CHANNEL_ID:-}
+      LISA_SLACK_ACTIVITY_CHANNEL_ID: ${LISA_SLACK_ACTIVITY_CHANNEL_ID:-}
+      LISA_SLACK_ACTIVITY_THREAD_TS: ${LISA_SLACK_ACTIVITY_THREAD_TS:-}
+    volumes:
+      - lisa-data:/var/lib/lisa
+    depends_on:
+      lisa-postgres:
+        condition: service_healthy
+      lisa-provision:
+        condition: service_completed_successfully
+    ports:
+      - "127.0.0.1:${LISA_PUBLIC_PORT:-8082}:8082"
+
+volumes:
+  lisa-postgres-data:
+  lisa-data:

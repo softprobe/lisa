@@ -286,10 +286,10 @@
 @media (max-height: 620px) {
   .tle-lisa-rail { overflow-y: auto; overflow-x: hidden; }
 }
-.thelake-explorer:has(.tle-lisa) { min-height: 100vh; background: #fff; color: #111; font-family: Arial, Helvetica, sans-serif; }
-.thelake-explorer:has(.tle-lisa), html:has(.tle-lisa), body:has(.tle-lisa) { overflow: hidden; }
-.thelake-explorer:has(.tle-lisa) > header { display: none; }
-.thelake-explorer:has(.tle-lisa) > .tle-error { position: absolute; z-index: 30; top: 12px; left: 72px; }
+.lisa-app:has(.tle-lisa) { min-height: 100vh; background: #fff; color: #111; font-family: Arial, Helvetica, sans-serif; }
+.lisa-app:has(.tle-lisa), html:has(.tle-lisa), body:has(.tle-lisa) { overflow: hidden; }
+.lisa-app:has(.tle-lisa) > header { display: none; }
+.lisa-app:has(.tle-lisa) > .tle-error { position: absolute; z-index: 30; top: 12px; left: 72px; }
 .tle-lisa {
   --lisa-violet: #8050ff;
   --lisa-violet-strong: #6633df;
@@ -312,8 +312,8 @@
 .tle-lisa button { font-family: inherit; }
 .tle-lisa.panel-closed { grid-template-columns: 72px minmax(0, 1fr); }
 .tle-lisa.panel-closed .tle-lisa-main { border-right: 0; }
-.thelake-explorer .tle-lisa-header { display: flex !important; height: 54px; min-height: 54px; padding: 0 14px 0 10px; align-items: center; justify-content: space-between !important; }
-.thelake-explorer .tle-lisa-header-actions { display: flex; flex: none; align-items: center; justify-content: flex-end; gap: 10px; margin-left: auto; }
+.lisa-app .tle-lisa-header { display: flex !important; height: 54px; min-height: 54px; padding: 0 14px 0 10px; align-items: center; justify-content: space-between !important; }
+.lisa-app .tle-lisa-header-actions { display: flex; flex: none; align-items: center; justify-content: flex-end; gap: 10px; margin-left: auto; }
 .tle-lisa-rail { display: flex; flex-direction: column; align-items: center; gap: 0; overflow-y: auto; padding: clamp(0px, calc((100dvh - 570px) / 2), 466px) 0 12px; border-right: 1px solid #e5e6e9; background: #fff; }
 .tle-lisa-rail button { display: grid; place-items: center; width: 56px; height: 56px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: #14171a; }
 .tle-lisa-rail button.active { border: 1px solid #ededed; background: #f7f7f7; }
@@ -380,7 +380,7 @@
 .tle-lisa-activity-overlay { position: fixed; inset: 0; z-index: 100; padding: 24px; background: #11131822; backdrop-filter: none; }
 .tle-lisa-activity-dialog { width: min(960px, 100%); height: min(700px, 100%); max-height: none; min-height: 0; border: 0; border-radius: 32px; background: #fbfbfd; box-shadow: 0 16px 44px #00000025; }
 .tle-lisa-activity-dialog-header { min-height: 86px; grid-template-columns: minmax(0, 1fr) 28px; gap: 4px 12px; padding: 13px 20px 11px; border-bottom-color: #e4e5e8; }
-.thelake-explorer .tle-lisa-activity-dialog-header { height: 86px; min-height: 86px; padding: 13px 20px 11px; align-items: center; display: grid; }
+.lisa-app .tle-lisa-activity-dialog-header { height: 86px; min-height: 86px; padding: 13px 20px 11px; align-items: center; display: grid; }
 .tle-lisa-dialog-status { padding: 4px 9px; border-radius: 12px; background: #e7f4e9; color: #277943; font-size: 11px; font-weight: 500; }
 .tle-lisa-activity-dialog-header h2 { font-size: 18px; font-weight: 600; letter-spacing: 0; }
 .tle-lisa-activity-dialog-close { position: absolute; top: 9px; right: 20px; width: 28px; height: 28px; border: 0; background: #ffffffc2; color: #282c32; box-shadow: 0 2px 8px #00000015; }

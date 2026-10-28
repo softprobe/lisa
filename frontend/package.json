@@ -1,0 +1,31 @@
+{
+  "name": "@softprobe/lisa-ui",
+  "version": "0.1.0",
+  "description": "Lisa workspace chat and activity interface",
+  "license": "Apache-2.0",
+  "type": "module",
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "scripts": {
+    "build": "vite build",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "typescript": "^5.8.2",
+    "vite": "^6.2.0",
+    "vitest": "^2.1.9"
+  },
+  "dependencies": {
+    "@assistant-ui/react": "^0.15.28",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  }
+}

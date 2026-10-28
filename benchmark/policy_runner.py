@@ -496,7 +496,7 @@ def main() -> None:
     parser.add_argument(
         "--catalog-manifest",
         type=Path,
-        default=Path("lisa/datasets/policy_evaluation/manifests/evaluation.json"),
+        default=Path("datasets/policy_evaluation/manifests/evaluation.json"),
         help="Input: full approved-policy catalog to seed; never infer from labeled pairs",
     )
     parser.add_argument(
@@ -522,7 +522,7 @@ def main() -> None:
         parser.error("--live is required to authorize provider calls")
     # Setup: bind process env to the disposable dogfood stack + isolated data dir.
     data_dir = args.data_dir or args.output.parent / f".{args.output.stem}-lisa-data"
-    repository_root = Path(__file__).resolve().parents[2]
+    repository_root = Path(__file__).resolve().parents[1]
     cleanup_target = lisa_dogfood_target(args.dogfood_env_file, repository_root)
     for retained_path in (args.output.resolve(), data_dir.resolve()):
         if (

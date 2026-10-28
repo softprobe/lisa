@@ -1729,7 +1729,7 @@ def test_activity_workflow_uses_activity_tools_without_database_or_session_searc
         Path(__file__).resolve().parents[1] / "skills/own-agent-qa/SKILL.md"
     ).read_text().casefold().split())
     evaluation_skill = " ".join((
-        Path(__file__).resolve().parents[2]
+        Path(__file__).resolve().parents[1]
         / ".agents/skills/run-lisa-policy-evaluation/SKILL.md"
     ).read_text().casefold().split())
     assert "for a chat evaluation, resolve the request first" in qa_skill

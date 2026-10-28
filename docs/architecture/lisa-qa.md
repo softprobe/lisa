@@ -5,10 +5,8 @@
 Lisa is an independently deployable Python service. It serves its own web UI
 and API, stores policies, activities, triage decisions, and evaluation results
 in its own PostgreSQL database, and stores immutable session evidence in its
-durable agent-workspace directory. Explorer remains a separate TheLake app.
-Lisa runs independently when TheLake is absent. An optional pull integration
-can be enabled with a TheLake API URL and workspace-scoped bearer token; without
-both settings Lisa never connects to TheLake and loads no sampling capability.
+durable agent-workspace directory. TheLake Explorer is a separate application. Lisa has no TheLake runtime
+connection; evidence enters through Lisa's own authenticated producer boundary.
 
 An operator or telemetry producer on a private network pushes a complete OTLP
 JSON session to `POST /internal/v1/session-traces`. This intake endpoint has no
@@ -26,20 +24,6 @@ The canonical path is
 name, payload hash, receipt time, format, and searchable summary. The API and
 worker must share the same durable mounted directory. Replaying identical
 content is idempotent; reusing an ID for different content returns 409.
-
-When configured, Lisa can wake hourly, use its packaged
-`sample-recent-sessions` skill, and pull a stratified sample through TheLake's
-generic session/span/trace read APIs. The default sample covers sessions that
-started in the prior 24 hours, waits until their latest span is at least ten
-minutes old, and selects at most five sessions across agents and error/no-error
-groups per hourly sampling window. A previously stored selection is not replaced
-by another candidate, so repeated wakeups do not drain the full lookback window.
-It verifies all spans and traces are retrievable before conversion and skips
-sessions above the 5,000-span bound. Sampled bundles use the same
-`SessionTraceIntake` as direct pushes, so persistence, idempotency, and queueing
-have one implementation. Lisa stores its own copy; TheLake receives no
-evaluation state. Set the sampling interval to zero to disable scheduled
-wakeups while retaining manual sampling.
 
 Identity follows the telemetry contract. Session ID resolves from span
 `sp.session.id`, then `gen_ai.conversation.id`, then the trace ID. Agent name
@@ -64,7 +48,7 @@ code fences are not metadata.
 ## Runtime boundaries
 
 - `app.py` composes the FastAPI service, serves the Lisa frontend assets and
-  exposes API routes on the same origin. `lisa/Dockerfile` builds and packages
+  exposes API routes on the same origin. `Dockerfile` builds and packages
   the frontend with the Python service without a TheLake Rust build. TheLake's
   Rust router serves Explorer only.
 - `repositories/session_traces.py` validates OTLP JSON, atomically stores the
@@ -73,12 +57,8 @@ code fences are not metadata.
   database. It records one durable receipt per immutable session and sends the
   queue message in the same Postgres transaction. Duplicate pushes do not
   enqueue duplicate work.
-- `services/session_trace_intake.py` is the shared persist-and-enqueue path for
-  direct HTTP intake and optional TheLake sampling.
-- `services/thelake_sampling.py` owns the optional authenticated TheLake client,
-  complete-session retrieval, stratified selection, OTLP conversion, and the
-  Lisa-owned wakeup that runs the packaged agent skill. It is constructed only
-  when both TheLake settings and Lisa's durable evaluation queue are available.
+- `services/session_trace_intake.py` is the persist-and-enqueue path for direct
+  HTTP intake.
 - `services/session_evaluations.py` validates the queued agent and hash,
   creates a deterministic activity, invokes the regular evaluation service,
   and retries transient failures through PGMQ visibility. Exhausted requests
@@ -89,9 +69,8 @@ code fences are not metadata.
 - `services/evaluations.py` loads approved policy records, triages candidate
   session-policy pairs, judges escalated evidence, and persists results.
 - The OpenHands adapter loads Lisa's packaged skills and launches the FastMCP
-  tools. TheLake tools and sampling skill are hidden unless the optional
-  integration is configured. Lisa's developer skills do not become product
-  skills unless the runtime loads them from `lisa/skills/`.
+  tools. The runtime exposes only Lisa-owned APIs and MCP tools. Lisa's developer skills do not become product
+  skills unless the runtime loads them from `skills/`.
 
 ## Long-running main chat
 
@@ -280,7 +259,7 @@ run-owned OpenHands process to force global checkpoint adoption before task
 follow-ups. They do not change deployment settings. These cases measure a
 representative text-only Lisa adaptation of LongMemEval and LongMemEval-V2; they
 are not official upstream scores. See
-[`lisa-activity-memory`](../../lisa/datasets/activity_memory/README.md) for
+[`lisa-activity-memory`](../../datasets/activity_memory/README.md) for
 source revisions, selection, licensing, and limitations.
 
 ## Evaluation flow
@@ -351,7 +330,7 @@ reference: one policy suggestion, one sampled QA observation, or one completed
 pushed-session activity that contains at least one failed policy evaluation.
 Each update stores one or more user-facing messages authored by the relevant
 Lisa model call: the single-run gap review, the repeated-gap synthesizer, or the
-policy judge. Explorer renders those messages as supplied and keeps evidence
+policy judge. The Lisa app renders those messages as supplied and keeps evidence
 links and owner actions as separate controls; it does not compose Lisa's words
 from trace fields or activity summaries.
 Signal creation and its sampled-run observation reference share a transaction;
@@ -383,18 +362,14 @@ saved can still cause a duplicate retry.
 Lisa's session search reads bounded metadata summaries from manifests and
 returns only sessions received within its search window. It is not a guarantee
 of complete coverage: only sessions delivered to Lisa's intake are evaluated.
-Delivery can be a direct push or an optional pull sample from TheLake. Producers
-must retry failed pushes and monitor delivery results; sampled sessions that
+Producers must retry failed pushes and monitor delivery results. Sessions that
 are incomplete or exceed Lisa's retrieval cap are not evaluated.
 
 ## Testing and local development
 
-The local dev stack runs TheLake and Explorer on `127.0.0.1:8090` and Lisa on
-`127.0.0.1:18083`, with a separate PGMQ-enabled Lisa Postgres service. Lisa's
-UI is available at `http://127.0.0.1:18083/lisa/`. Optional scheduled sampling
-requires explicit `LISA_THELAKE_URL` and `LISA_THELAKE_BEARER_TOKEN` settings;
-otherwise evaluation starts from direct session pushes.
+Run Lisa and its PGMQ-enabled PostgreSQL service from this repository; see
+[Local Lisa development](../how-to/local-development.md). The app is served at
+`/lisa/`, and session evaluation starts from direct OTLP pushes.
 
-Automated tests use transient databases and stacks owned by `lisa/conftest.py`
-and `scripts/test_stack.py`. Never attach tests to a developer's running Lisa
-or TheLake database.
+Automated tests use transient databases and stacks owned by `conftest.py` and
+`scripts/test_stack.py`. Never attach tests to a developer's running database.

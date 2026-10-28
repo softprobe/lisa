@@ -8,7 +8,7 @@ the same session and policy IDs as the runtime contract.
 
 | Term | Definition | Example |
 |---|---|---|
-| **Session** | One user-facing conversation or job in TheLake, identified by `session_id`. The value is a string resolved from session telemetry; TheLake does not require UUIDs or a particular length. If no explicit session ID is present, TheLake may fall back to `trace_id` for correlation, which does not make it an explicit product session. | `S017` |
+| **Session** | One user-facing conversation or job represented by telemetry and identified by `session_id`. The value is a string resolved from session telemetry; the session contract does not require UUIDs or a particular length. If no explicit session ID is present, producers may fall back to `trace_id` for correlation, which does not make it an explicit product session. | `S017` |
 | **Trajectory** | The ordered user, assistant, context, and tool events Lisa projects from a session's spans for triage and judging. It is data derived from a session, not a second object with its own ID. | Session `S017` projects to a trajectory; Lisa still identifies the input as `S017`. |
 | **Trace** | A group of spans within a session that share a `trace_id`. A session can contain more than one trace. Trace IDs are evidence references, not the evaluation input's ID. | `trace-8` belongs to session `S017`. |
 | **Policy** | One rule record in Lisa's policy catalog. Its readable `policy_id` is the section ID used in Lisa, such as `P1.2` or `P1.2.1`; each ID is a distinct policy. Updates keep the same ID and row. Approval determines whether Lisa may evaluate it. | `P1.2` — “Confirm before issuing a refund.” |
@@ -29,7 +29,7 @@ Dataset annotations and runtime evaluations use the same `(session_id,
 policy_id)` pair. The trajectory is derived from its session, and annotation
 metadata is only scoring truth; it is not passed into the evaluator.
 
-TheLake's base definition of a product session is in the [telemetry data
+The base definition of a product session is in the [telemetry data
 model](../sdk/data-model.md). Lisa's `trajectory` is the evidence projection
 described above, and its event serialization is documented in the [judge
 trajectory format](../reference/lisa-trajectory-format.md).

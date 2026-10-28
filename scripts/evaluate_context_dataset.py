@@ -13,8 +13,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from benchmark.activity_runner import run_benchmark
 
-ROOT = Path(__file__).resolve().parents[2]
-MANIFEST = ROOT / "lisa" / "datasets" / "conversation_context" / "manifests" / "benchmark.json"
+ROOT = Path(__file__).resolve().parents[1]
+MANIFEST = ROOT / "datasets" / "conversation_context" / "manifests" / "benchmark.json"
 ARTIFACTS = ROOT / "target" / "test-artifacts" / "lisa-context-benchmark"
 
 

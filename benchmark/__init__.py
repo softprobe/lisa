@@ -1,6 +1,6 @@
 """Live performance-evaluation runners for Lisa (not unit tests, not data).
 
-Java-style layout under ``lisa/``:
+Lisa repository layout:
 
 - ``src/lisa/`` — production code (main)
 - ``tests/`` — all software unit/integration tests

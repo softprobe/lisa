@@ -6,23 +6,23 @@ Live agent evaluation — **not** unit tests.
 
 | Path | Role |
 |------|------|
-| `lisa/src/lisa/` | Production code (main) |
-| `lisa/tests/` | All software tests (UT/IT) |
-| `lisa/datasets/` | Labeled resources **and** their loaders |
-| `lisa/benchmark/` | Live runners only (env lifecycle via `lisa/conftest.py`) |
+| `src/lisa/` | Production code (main) |
+| `tests/` | All software tests (UT/IT) |
+| `datasets/` | Labeled resources **and** their loaders |
+| `benchmark/` | Live runners only (env lifecycle via `conftest.py`) |
 
 ## Where to run
 
-thelake repository root (directory that contains `lisa/` and `examples/`):
+Lisa repository root:
 
 ```sh
-test -d lisa && test -f lisa/pyproject.toml && pwd
+test -f pyproject.toml && test -d src/lisa && pwd
 ```
 
 ## Software tests (not the benchmark)
 
 ```sh
-uv run --project lisa pytest -q lisa/tests
+uv run --extra test pytest -q tests
 ```
 
 ## Credentials (live runs)
@@ -45,14 +45,14 @@ held-out split `test`.
 ## Activity agent benchmark
 
 ```sh
-uv run --project lisa --env-file .env \
-  python lisa/scripts/evaluate_activity_dataset.py \
+uv run --project . --env-file .env \
+  python scripts/evaluate_activity_dataset.py \
   --live --split benchmark
 ```
 
-- Resources + loader: `lisa/datasets/activity_management/`, `datasets.activity_dataset`
+- Resources + loader: `datasets/activity_management/`, `datasets.activity_dataset`
 - Report: `target/test-artifacts/lisa-activity-benchmark/<run-id>/report.json`
-- Details: [`docs/how-to/lisa-activity-evaluation.md`](../../docs/how-to/lisa-activity-evaluation.md)
+- Details: [`docs/how-to/lisa-activity-evaluation.md`](../docs/how-to/lisa-activity-evaluation.md)
 - SQL-specific column restrictions use `tool_query_arguments_must_not_include`,
   so activity updates can accurately explain why a field is unavailable without
   being miscounted as a database column probe.
@@ -62,11 +62,11 @@ uv run --project lisa --env-file .env \
 ## Conversation context benchmark
 
 ```sh
-uv run --project lisa --env-file .env \
-  python lisa/scripts/evaluate_context_dataset.py --live --split benchmark
+uv run --project . --env-file .env \
+  python scripts/evaluate_context_dataset.py --live --split benchmark
 ```
 
-- Resources + loader: `lisa/datasets/conversation_context/`,
+- Resources + loader: `datasets/conversation_context/`,
   `datasets.activity_dataset`
 - Report: `target/test-artifacts/lisa-context-benchmark/<run-id>/report.json`
 - Covers interleaved tasks in the single main chat, Slack thread isolation,
@@ -87,11 +87,11 @@ uv run --project lisa --env-file .env \
 ## Per-activity memory benchmark
 
 ```sh
-uv run --project lisa --env-file .env \
-  python lisa/scripts/evaluate_activity_memory_dataset.py --live --split development
+uv run --project . --env-file .env \
+  python scripts/evaluate_activity_memory_dataset.py --live --split development
 
-uv run --project lisa --env-file .env \
-  python lisa/scripts/evaluate_activity_memory_dataset.py --live --split benchmark
+uv run --project . --env-file .env \
+  python scripts/evaluate_activity_memory_dataset.py --live --split benchmark
 ```
 
 - Dataset, source mapping, licenses, and limitations:
@@ -158,10 +158,10 @@ uv run --project lisa --env-file .env \
 
 ```sh
 RUN_ID=20261019-a1
-THELAKE_DOGFOOD_PROJECT_NAME=lisa-policy-eval-$RUN_ID \
-THELAKE_DOGFOOD_ENV_FILE=warehouse/dogfood/lisa-policy-eval-$RUN_ID.env \
-THELAKE_DOGFOOD_DATA_PATH=./warehouse/dogfood/lisa-policy-eval-$RUN_ID \
-THELAKE_DEFAULT_WORKSPACE_ID=$(uuidgen | tr '[:upper:]' '[:lower:]') \
+LISA_DOGFOOD_PROJECT_NAME=lisa-policy-eval-$RUN_ID \
+LISA_DOGFOOD_ENV_FILE=warehouse/dogfood/lisa-policy-eval-$RUN_ID.env \
+LISA_DOGFOOD_DATA_PATH=./warehouse/dogfood/lisa-policy-eval-$RUN_ID \
+LISA_WORKSPACE_ID=$(uuidgen | tr '[:upper:]' '[:lower:]') \
 LISA_LLM_TRACE_ENABLED=1 \
 bash examples/lisa-dogfood/start.sh
 ```
@@ -170,12 +170,12 @@ bash examples/lisa-dogfood/start.sh
 
 ```sh
 RUN_ID=20261019-a1
-LISA_LLM_TRACE_ENABLED=1 uv run --project lisa --env-file .env \
-  python lisa/scripts/evaluate_policy_dataset.py --live \
+LISA_LLM_TRACE_ENABLED=1 uv run --project . --env-file .env \
+  python scripts/evaluate_policy_dataset.py --live \
   --dogfood-env-file warehouse/dogfood/lisa-policy-eval-$RUN_ID.env \
-  --manifest lisa/datasets/policy_evaluation/manifests/evaluation.json \
+  --manifest datasets/policy_evaluation/manifests/evaluation.json \
   --output /tmp/lisa-policy-eval-$RUN_ID/report.json
 ```
 
-- Resources + loader: `lisa/datasets/policy_evaluation/`, `datasets.policy_dataset`
+- Resources + loader: `datasets/policy_evaluation/`, `datasets.policy_dataset`
 - Details: [`docs/how-to/policy-triage-evaluation.md`](../../docs/how-to/policy-triage-evaluation.md)

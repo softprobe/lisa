@@ -359,7 +359,7 @@ fingerprint. Policies remain in `lisa.policies`; policy tools and
 normal session and policy services and never accept dataset-selected policy
 objects directly.
 
-Provision the Lisa schema with `lisa/scripts/provision_lisa.py`. Lisa uses one
+Provision the Lisa schema with `scripts/provision_lisa.py`. Lisa uses one
 clean schema definition without migrations or compatibility paths. Explicit
 schema recreation drops and rebuilds the Lisa schema, clearing its policies,
 activities, and operational history. Automated tests use transient Lisa

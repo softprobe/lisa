@@ -204,15 +204,16 @@ def test_lisa_python_service_serves_its_frontend_and_client_routes(client, tmp_p
     (static_dir / "assets" / "app.js").write_text("console.log('Lisa')", encoding="utf-8")
     monkeypatch.setenv("LISA_STATIC_DIR", str(static_dir))
 
-    index = client.get("/lisa/")
-    route = client.get("/lisa/activities/activity-1")
-    asset = client.get("/lisa/assets/app.js")
+    index = client.get("/")
+    route = client.get("/activities/activity-1")
+    asset = client.get("/assets/app.js")
 
     assert index.status_code == 200
     assert 'window.__LISA_API_BASE_PATH__="/v1"' in index.text
     assert route.status_code == 200 and route.text == index.text
     assert asset.status_code == 200 and "console.log" in asset.text
-    assert client.get("/lisa/assets/missing.js").status_code == 404
+    assert client.get("/assets/missing.js").status_code == 404
+    assert client.get("/v1/missing-route").status_code == 404
 
 
 @pytest.mark.parametrize(
