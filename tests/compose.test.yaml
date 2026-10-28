@@ -2,6 +2,12 @@
 services:
   lisa-postgres:
     image: ghcr.io/pgmq/pg18-pgmq:v1.10.0
+    command:
+      - postgres
+      - -c
+      - checkpoint_timeout=30s
+      - -c
+      - max_wal_size=512MB
     environment:
       POSTGRES_USER: lisa_test
       POSTGRES_PASSWORD: lisa_test
@@ -10,7 +16,7 @@ services:
       - "127.0.0.1::5432"
     # Test-only, run-owned database files live in container memory, not the Docker disk.
     tmpfs:
-      - /var/lib/postgresql:rw,size=2g
+      - /var/lib/postgresql:rw,size=4g
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U lisa_test -d postgres"]
       interval: 200ms
