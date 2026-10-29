@@ -1,6 +1,6 @@
 # Local Lisa development
 
-Run Lisa, its dedicated PostgreSQL database, and the web app from this repository. Lisa evaluates complete OTLP sessions pushed to its private-network intake endpoint; it does not require TheLake.
+Run Lisa and its web app from this repository. Lisa evaluates complete OTLP sessions pushed to its private-network intake endpoint; it does not require TheLake.
 
 ## Start Lisa
 
@@ -15,6 +15,29 @@ docker compose up --build
 The app and API are available at `http://127.0.0.1:8082/lisa/`. PostgreSQL is persistent in the `lisa-postgres-data` volume, and Lisa's evidence workspace is stored in the `lisa-data` volume. Keep `.env` private.
 
 To stop containers without deleting data, run `docker compose down`. To remove the local database and evidence data, run `docker compose down --volumes`.
+
+## Lightweight sandbox
+
+For a local run without Docker Compose or a separately configured database, install
+the embedded-server extra and launch Lisa directly:
+
+```bash
+uv sync --extra openhands --extra sandbox
+uv run --extra openhands --extra sandbox python scripts/run_sandbox.py
+```
+
+The launcher starts PostgreSQL through `pgembed`, provisions Lisa, installs the
+official PGMQ SQL snapshot, and runs the same app, workers, and PGMQ repositories
+used by the regular deployment. The database persists under
+`~/.local/share/lisa/postgres` by default; set `LISA_EMBEDDED_DATABASE_DIR` to
+change it. Lisa's other local files default under `~/.local/share/lisa/` as well.
+The launcher listens on `127.0.0.1:8082`; use `LISA_SANDBOX_HOST` and
+`LISA_SANDBOX_PORT` to change that. Stop with Ctrl+C; the PostgreSQL process is
+stopped cleanly and its data directory is retained.
+
+PGMQ's SQL-only install is a pinned snapshot, without extension-managed upgrades.
+The regular Compose and production deployment paths continue using the PGMQ
+PostgreSQL extension.
 
 ## Send sessions
 

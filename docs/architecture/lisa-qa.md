@@ -7,6 +7,10 @@ and API, stores policies, activities, triage decisions, and evaluation results
 in its own PostgreSQL database, and stores immutable session evidence in its
 durable agent-workspace directory. TheLake Explorer is a separate application. Lisa has no TheLake runtime
 connection; evidence enters through Lisa's own authenticated producer boundary.
+Normal deployments connect to an externally managed PostgreSQL server. The
+optional local sandbox launcher uses `pgembed` to start a bundled PostgreSQL
+process and installs PGMQ from its official SQL snapshot; Lisa's repositories
+and queue behavior remain the same in both modes.
 
 An operator or telemetry producer on a private network pushes a complete OTLP
 JSON session to `POST /internal/v1/session-traces`. This intake endpoint has no
@@ -367,9 +371,9 @@ are incomplete or exceed Lisa's retrieval cap are not evaluated.
 
 ## Testing and local development
 
-Run Lisa and its PGMQ-enabled PostgreSQL service from this repository; see
-[Local Lisa development](../how-to/local-development.md). The app is served at
-`/lisa/`, and session evaluation starts from direct OTLP pushes.
+Run Lisa with the PGMQ-enabled PostgreSQL service from this repository, or use
+the embedded PostgreSQL sandbox; see [Local Lisa development](../how-to/local-development.md).
+The app is served at `/lisa/`, and session evaluation starts from direct OTLP pushes.
 
 Automated tests use transient databases and stacks owned by `conftest.py` and
 `scripts/test_stack.py`. Never attach tests to a developer's running database.
