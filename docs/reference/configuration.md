@@ -16,6 +16,8 @@ Lisa is configured through environment variables. Runtime data is stored in Lisa
 | `GEMINI_MODEL_NAME` | Judge model; defaults to `gemini-3.8-flash`. |
 | `LISA_DATA_DIR` | Root for OpenHands and conversation state. |
 | `LISA_AGENT_WORKSPACE_ROOT` | Root for pushed OTLP session bundles. |
+| `LISA_EMBEDDED_DATABASE_DIR` | PostgreSQL data directory used by `scripts/run_sandbox.py`; defaults to `~/.local/share/lisa/postgres`. |
+| `LISA_SANDBOX_HOST` / `LISA_SANDBOX_PORT` | Bind address and port used by the embedded sandbox launcher; default to `127.0.0.1:8082`. |
 | `LISA_MAX_SESSION_TRACE_BYTES` | Maximum body size for pushed session traces; defaults to 16 MiB. |
 | `LISA_CORS_ORIGINS` | Comma-separated browser origins allowed by CORS. |
 | `LISA_OWNER_USER_IDS` | Lisa actor IDs authorized to approve policy changes. |

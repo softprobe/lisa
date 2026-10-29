@@ -180,6 +180,12 @@ authorization contract for them.
 
 ## Activity and verification
 
+For interactive local use without Docker Compose, start
+`scripts/run_sandbox.py` with the `openhands` and `sandbox` extras. It owns a
+`pgembed` PostgreSQL child process and installs PGMQ from the official SQL
+snapshot. This sandbox does not change the production extension path or the
+transient Docker PostgreSQL lifecycle required for stateful tests.
+
 - Lisa tests and live evaluation harnesses follow the repository-wide
   transient-resource rule in `AGENTS.md`. **All** disposable environment
   setup/teardown lives in [`conftest.py`](../../../conftest.py)

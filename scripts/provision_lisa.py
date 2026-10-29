@@ -95,11 +95,41 @@ def _apply_schema(
     writer_role: str,
     reader_role: str,
 ) -> None:
-    connection.execute(
-        files("lisa").joinpath("sql", "queue", "create_extension.sql").read_text(
-            encoding="utf-8"
-        )
-    )
+    pgmq_state = connection.execute(
+        """
+        SELECT
+            EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pgmq') AS installed,
+            EXISTS (SELECT 1 FROM pg_available_extensions WHERE name = 'pgmq') AS available,
+            EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = 'pgmq') AS schema_exists
+        """
+    ).fetchone()
+    if not pgmq_state["installed"]:
+        if pgmq_state["schema_exists"]:
+            functions = {
+                row["proname"]
+                for row in connection.execute(
+                    """
+                    SELECT DISTINCT p.proname
+                    FROM pg_proc AS p
+                    JOIN pg_namespace AS n ON n.oid = p.pronamespace
+                    WHERE n.nspname = 'pgmq'
+                    """
+                ).fetchall()
+            }
+            required_functions = {"create", "send", "read", "delete", "archive"}
+            if not required_functions.issubset(functions):
+                raise RuntimeError("The pgmq schema exists but its required functions are missing")
+        elif pgmq_state["available"]:
+            connection.execute(
+                files("lisa").joinpath("sql", "queue", "create_extension.sql").read_text(
+                    encoding="utf-8"
+                )
+            )
+        else:
+            raise RuntimeError(
+                "PGMQ is unavailable: install the pgmq extension or its SQL-only objects "
+                "before provisioning Lisa"
+            )
     connection.execute(_sql("schema.sql"))
     connection.execute(
         files("lisa").joinpath("sql", "queue", "create_session_evaluations.sql").read_text(
@@ -163,6 +193,23 @@ def provision(
         )
 
 
+def _ensure_pgmq_sql(dsn: str) -> str | None:
+    """Install the official PGMQ SQL snapshot when this database lacks its schema."""
+    with psycopg.connect(dsn) as connection:
+        schema_exists = connection.execute(
+            "SELECT to_regnamespace('pgmq') IS NOT NULL"
+        ).fetchone()[0]
+    if schema_exists:
+        return None
+    try:
+        from pgmq import install_pgmq_from_sql
+    except ImportError as error:
+        raise RuntimeError(
+            "SQL-only PGMQ setup requires the `pgmq` package; install Lisa's sandbox extra"
+        ) from error
+    return install_pgmq_from_sql(dsn=dsn)
+
+
 def main() -> None:
     dsn = os.environ.get("LISA_DATABASE_PROVISION_URL", "").strip()
     workspace_id = os.environ.get("LISA_WORKSPACE_ID", "").strip()
@@ -170,6 +217,9 @@ def main() -> None:
         raise SystemExit("LISA_DATABASE_PROVISION_URL is required")
     if not workspace_id:
         raise SystemExit("LISA_WORKSPACE_ID is required")
+    pgmq_install_mode = os.environ.get("LISA_PGMQ_INSTALL_MODE", "extension").strip()
+    if pgmq_install_mode not in {"extension", "sql"}:
+        raise SystemExit("LISA_PGMQ_INSTALL_MODE must be 'extension' or 'sql'")
     writer_role = os.environ.get("LISA_DATABASE_WRITER_ROLE", "lisa_writer").strip()
     reader_role = os.environ.get("LISA_DATABASE_READER_ROLE", "lisa_reader").strip()
     writer_password = os.environ.get("LISA_DATABASE_WRITER_PASSWORD", "").strip()
@@ -187,6 +237,8 @@ def main() -> None:
             writer_role=writer_role,
             reader_role=reader_role,
         )
+    if pgmq_install_mode == "sql":
+        _ensure_pgmq_sql(dsn)
     recreate = os.environ.get("LISA_DATABASE_RECREATE", "").strip() in {"1", "true", "yes"}
     provision(
         dsn,
