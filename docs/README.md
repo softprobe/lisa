@@ -10,4 +10,4 @@
 | Integrate Slack | [Slack evaluator](how-to/slack-evaluator.md) |
 | Understand trajectory format | [Trajectory format](reference/lisa-trajectory-format.md) |
 
-Runtime skills live in [`../skills/`](../skills/); developer workflows live in [`../.agents/skills/`](../.agents/skills/).
+Runtime skills live in [`../skills/`](../skills/). The workspace keeps developer workflow skills in [`../../.agents/skills/`](../../.agents/skills/).
