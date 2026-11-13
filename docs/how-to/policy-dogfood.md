@@ -16,9 +16,10 @@ This separation matters: a good judge result does not prove the learning skill
 found the right rule, and a successful skill run does not prove online trace
 evaluation works.
 
-Codex and Cursor project skills for these developer workflows live in
-`.agents/skills/`: `run-lisa-evaluation-dogfood` exercises the local live path,
-and `verify-lisa-slack-alert` checks the optional Slack notification path.
+The workspace keeps these developer workflow skills in its root
+`.agents/skills/` directory. `run-lisa-evaluation-dogfood` exercises the local
+live path, and `verify-lisa-slack-alert` checks the optional Slack notification
+path.
 These developer skills are separate from Lisa's runtime skills in
 [`skills/`](../../skills/).
 
@@ -65,7 +66,7 @@ The dataset also contains ten STATE-Bench trajectories. Only each authored targe
 pair is annotated; other catalog pairs remain unreviewed.
 
 For labeled production-path quality, use the
-[production-path evaluation skill](../../.agents/skills/run-lisa-policy-evaluation/SKILL.md),
+[production-path evaluation skill](../../../.agents/skills/run-lisa-policy-evaluation/SKILL.md),
 which loads the full policy catalog through Lisa's policy-management service and
 calls `EvaluationService` against Lisa's local evidence. Metrics and limits:
 [the evaluation guide](policy-triage-evaluation.md).
@@ -82,7 +83,7 @@ durable receipt and queue insertion, not evaluation completion or an atomic
 transaction across the filesystem and database.
 
 For a live evaluation, use the isolated stack and dataset flow in the
-[policy evaluation skill](../../.agents/skills/run-lisa-policy-evaluation/SKILL.md).
+[policy evaluation skill](../../../.agents/skills/run-lisa-policy-evaluation/SKILL.md).
 The run makes provider calls and may incur charges. The sample agent only
 simulates a local refund tool and never connects to a payment system. The
 interactive developer environment is documented in

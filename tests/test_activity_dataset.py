@@ -1728,10 +1728,6 @@ def test_activity_workflow_uses_activity_tools_without_database_or_session_searc
     qa_skill = " ".join((
         Path(__file__).resolve().parents[1] / "skills/own-agent-qa/SKILL.md"
     ).read_text().casefold().split())
-    evaluation_skill = " ".join((
-        Path(__file__).resolve().parents[1]
-        / ".agents/skills/run-lisa-policy-evaluation/SKILL.md"
-    ).read_text().casefold().split())
     assert "for a chat evaluation, resolve the request first" in qa_skill
     assert "evaluate_session` reuses that active activity" in qa_skill
     assert "when the result includes `activity_finalized: false`" in qa_skill
@@ -1740,8 +1736,6 @@ def test_activity_workflow_uses_activity_tools_without_database_or_session_searc
     assert "When an authorized owner asks to delete a policy" in policy_skill
     assert "Historical evaluation rows retain the policy ID" in policy_skill
     assert "call `delete_policy` for that ID" in policy_skill
-    assert "owners can request policy deletion in natural language" in evaluation_skill
-    assert "historical evaluation rows retain the policy id, name, and criteria hash" in evaluation_skill
     assert "verify the exact policy ID and its current approval state with `list_policies` or `read_policy`" in policy_skill
     assert "call `approve_policy` with the policy ID they named" in policy_skill
     assert "update the existing row in place" in policy_skill

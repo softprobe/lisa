@@ -1,3 +1,0 @@
-interface:
-  display_name: "Run Lisa Activity Benchmark"
-  short_description: "Run Lisa's labeled activity agent benchmark"

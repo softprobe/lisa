@@ -12,7 +12,7 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 # Offline harness lives outside the installable runtime package.
-_REPO = Path(__file__).resolve().parents[4]
+_REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(_REPO))
 
 from datasets.policy_dataset import DEFAULT_MANIFEST, load_dataset
