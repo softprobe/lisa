@@ -1,0 +1,36 @@
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    bash \
+    ca-certificates \
+    curl \
+    e2fsprogs \
+    git \
+    iproute2 \
+    iputils-ping \
+    jq \
+    openssh-client \
+    procps \
+    python3 \
+    python3-pip \
+    python3-venv \
+    util-linux \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY pyproject.toml ./pyproject.toml
+COPY src ./src
+COPY skills ./skills
+
+RUN python3 -m venv /opt/lisa-venv && \
+    /opt/lisa-venv/bin/pip install --no-cache-dir --upgrade pip && \
+    /opt/lisa-venv/bin/pip install --no-cache-dir '.[openhands]'
+
+COPY deploy/firecracker/guest-bootstrap.sh /usr/local/bin/lisavm-guest-bootstrap
+COPY deploy/firecracker/init.sh /sbin/init
+RUN chmod 0755 /usr/local/bin/lisavm-guest-bootstrap /sbin/init && \
+    mkdir -p /etc/lisavm /var/lib/lisa /var/log
