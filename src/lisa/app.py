@@ -8,7 +8,7 @@ import os
 from contextlib import asynccontextmanager
 from pathlib import Path, PurePosixPath
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 
@@ -84,6 +84,34 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type", "X-Softprobe-Assertion"],
 )
 app.include_router(http_router)
+
+
+def _worker_active_jobs(worker: object | None) -> int:
+    if worker is None:
+        return 0
+    count = getattr(worker, "active_jobs", 0)
+    return int(count) if isinstance(count, int) and count > 0 else 0
+
+
+@app.get("/internal/v1/runtime/busy", include_in_schema=False)
+async def runtime_busy(request: Request) -> dict[str, object]:
+    services = getattr(request.app.state, "workspace_services", None)
+    if services is None:
+        return {"busy": False, "active_jobs": 0, "workers": {}}
+    workers = {
+        "session_evaluation": _worker_active_jobs(getattr(services, "session_evaluation_worker", None)),
+        "conversation_checkpoint": _worker_active_jobs(
+            getattr(services, "conversation_checkpoint_worker", None)
+        ),
+        "policy_discovery": _worker_active_jobs(getattr(services, "policy_discovery_worker", None)),
+        "slack": _worker_active_jobs(getattr(services, "slack_worker", None)),
+    }
+    active_jobs = sum(workers.values())
+    return {
+        "busy": active_jobs > 0,
+        "active_jobs": active_jobs,
+        "workers": workers,
+    }
 
 
 def _static_root() -> Path:

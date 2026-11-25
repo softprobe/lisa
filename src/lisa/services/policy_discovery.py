@@ -224,9 +224,15 @@ class PolicyDiscoveryWorker:
     def __init__(self, service: PolicyDiscoveryService, poll_seconds: int = 60):
         self.service = service
         self.poll_seconds = max(10, poll_seconds)
+        self.active_jobs: int = 0
+
+    @property
+    def is_busy(self) -> bool:
+        return self.active_jobs > 0
 
     async def run_forever(self) -> None:
         while True:
+            self.active_jobs += 1
             try:
                 await asyncio.to_thread(self.service.review_pending_samples)
                 await asyncio.to_thread(self.service.synthesize_daily)
@@ -237,4 +243,6 @@ class PolicyDiscoveryWorker:
                     "Policy discovery worker failed (%s): %s",
                     type(error).__name__, redact_text(str(error))[:500],
                 )
+            finally:
+                self.active_jobs = max(0, self.active_jobs - 1)
             await asyncio.sleep(self.poll_seconds)

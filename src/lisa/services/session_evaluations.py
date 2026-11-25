@@ -23,6 +23,11 @@ class SessionEvaluationWorker:
         self.traces = traces
         self.services = services
         self.policy_discovery = policy_discovery
+        self.active_jobs: int = 0
+
+    @property
+    def is_busy(self) -> bool:
+        return self.active_jobs > 0
 
     async def run_forever(self) -> None:
         while True:
@@ -43,6 +48,13 @@ class SessionEvaluationWorker:
                 await asyncio.sleep(2)
 
     async def _process(self, message: dict) -> None:
+        self.active_jobs += 1
+        try:
+            await self._process_message(message)
+        finally:
+            self.active_jobs = max(0, self.active_jobs - 1)
+
+    async def _process_message(self, message: dict) -> None:
         payload = message["message"]
         message_id = int(message["msg_id"])
         session_id = str(payload.get("session_id", ""))
