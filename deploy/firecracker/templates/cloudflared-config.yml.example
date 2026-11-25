@@ -1,0 +1,7 @@
+tunnel: <CLOUDFLARE_TUNNEL_UUID>
+credentials-file: /etc/cloudflared/<CLOUDFLARE_TUNNEL_UUID>.json
+
+ingress:
+  - hostname: lisavm.example.com
+    service: http://127.0.0.1:7700
+  - service: http_status:404

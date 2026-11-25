@@ -1,0 +1,83 @@
+#cloud-config
+package_update: true
+packages:
+  - curl
+  - jq
+  - iproute2
+  - iptables
+  - python3
+  - zstd
+  - gzip
+  - ca-certificates
+
+write_files:
+  - path: /etc/lisavm/lisavm.env
+    permissions: "0600"
+    owner: root:root
+    content: |
+      LISAVM_LISTEN_ADDR=127.0.0.1:7700
+      LISAVM_API_TOKEN=change-me
+      LISAVM_ROOT=/var/lib/lisavm
+      LISAVM_BRIDGE=lisabr0
+      LISAVM_GATEWAY_IP=172.16.0.1
+      LISAVM_VCPU_COUNT=1
+      LISAVM_MEM_SIZE_MIB=512
+
+  - path: /etc/systemd/system/lisavm.service
+    permissions: "0644"
+    owner: root:root
+    content: |
+      [Unit]
+      Description=Lisa Firecracker MicroVM Control Plane
+      After=network-online.target
+      Wants=network-online.target
+
+      [Service]
+      Type=simple
+      EnvironmentFile=/etc/lisavm/lisavm.env
+      ExecStart=/usr/local/bin/lisavm
+      Restart=on-failure
+      RestartSec=3
+      LimitNOFILE=65536
+      TasksMax=infinity
+
+      [Install]
+      WantedBy=multi-user.target
+
+runcmd:
+  - |
+    set -euo pipefail
+    RELEASE_REPO="${LISAVM_RELEASE_REPO:-softprobe/lisa}"
+    RELEASE_TAG="${LISAVM_RELEASE_TAG:-latest}"
+    case "$(uname -m)" in
+      x86_64) ARCH="amd64" ;;
+      aarch64|arm64) ARCH="arm64" ;;
+      *) echo "unsupported arch: $(uname -m)" >&2; exit 1 ;;
+    esac
+
+    if [ "${RELEASE_TAG}" = "latest" ]; then
+      BASE_URL="https://github.com/${RELEASE_REPO}/releases/latest/download"
+    else
+      BASE_URL="https://github.com/${RELEASE_REPO}/releases/download/${RELEASE_TAG}"
+    fi
+
+    WORKDIR="$(mktemp -d)"
+    trap 'rm -rf "${WORKDIR}"' EXIT
+
+    curl -fsSL "${BASE_URL}/SHA256SUMS" -o "${WORKDIR}/SHA256SUMS"
+    curl -fsSL "${BASE_URL}/lisavm-linux-${ARCH}" -o "${WORKDIR}/lisavm-linux-${ARCH}"
+    curl -fsSL "${BASE_URL}/rootfs-${ARCH}.ext4.zst" -o "${WORKDIR}/rootfs-${ARCH}.ext4.zst"
+    curl -fsSL "${BASE_URL}/setup-kvm-host.sh" -o "${WORKDIR}/setup-kvm-host.sh"
+
+    (cd "${WORKDIR}" && sha256sum -c --ignore-missing SHA256SUMS)
+
+    install -m 0755 "${WORKDIR}/lisavm-linux-${ARCH}" /usr/local/bin/lisavm
+    mkdir -p /var/lib/lisavm/images
+    zstd -d -f "${WORKDIR}/rootfs-${ARCH}.ext4.zst" -o /var/lib/lisavm/images/rootfs.ext4
+    chmod 0644 /var/lib/lisavm/images/rootfs.ext4
+
+    chmod +x "${WORKDIR}/setup-kvm-host.sh"
+    "${WORKDIR}/setup-kvm-host.sh"
+
+    systemctl daemon-reload
+    systemctl enable --now lisavm.service

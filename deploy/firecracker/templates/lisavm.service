@@ -1,0 +1,17 @@
+[Unit]
+Description=Lisa Firecracker MicroVM Control Plane
+Documentation=https://github.com/softprobe/lisa
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/lisavm/lisavm.env
+ExecStart=/usr/local/bin/lisavm
+Restart=on-failure
+RestartSec=3
+LimitNOFILE=65536
+TasksMax=infinity
+
+[Install]
+WantedBy=multi-user.target
