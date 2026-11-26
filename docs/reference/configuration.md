@@ -22,5 +22,6 @@ Lisa is configured through environment variables. Runtime data is stored in Lisa
 | `SOFTPROBE_ASSERTION_HMAC_SECRET` | HMAC key for signed workspace assertions when enabled. |
 | `LISA_SLACK_*` | Optional Slack event and notification configuration; see [Slack conversations](../how-to/slack-evaluator.md). |
 | `LISA_STATIC_DIR` | Frontend bundle directory; defaults to `/app/static` in the image. |
+| `LISA_MCP_SERVERS_PATH` | Optional JSON file of injected external MCP server configs (`mcp-servers.json`); built-in `lisa` cannot be overridden. |
 
 The session intake `POST /internal/v1/session-traces` is unauthenticated and must remain on a private network. Producers submit a complete OTLP JSON bundle and retry failed submissions. See [dogfood](../how-to/policy-dogfood.md) for a full flow.

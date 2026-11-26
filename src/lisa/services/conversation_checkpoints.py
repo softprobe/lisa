@@ -35,6 +35,11 @@ class ConversationCheckpointWorker:
         self.llm_factory = llm_factory
         self.context = context
         self.activities = activities
+        self.active_jobs: int = 0
+
+    @property
+    def is_busy(self) -> bool:
+        return self.active_jobs > 0
 
     async def run_forever(self) -> None:
         while True:
@@ -51,6 +56,13 @@ class ConversationCheckpointWorker:
                 await asyncio.sleep(2)
 
     def _process(self, message: dict) -> None:
+        self.active_jobs += 1
+        try:
+            self._process_message(message)
+        finally:
+            self.active_jobs = max(0, self.active_jobs - 1)
+
+    def _process_message(self, message: dict) -> None:
         payload = message.get("message", {})
         if payload.get("kind") == "activity_memory":
             self._process_activity_memory(message, payload)

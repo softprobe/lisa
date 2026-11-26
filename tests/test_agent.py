@@ -563,3 +563,129 @@ def test_call_recording_setting_and_conversation_link_reach_mcp(monkeypatch, tmp
     environment = captured["mcp_config"]["lisa"].env
     assert environment["LISA_LLM_TRACE_ENABLED"].get_secret_value() == "1"
     assert environment["LISA_CONVERSATION_ID"].get_secret_value() == conversation_id
+
+
+def test_openhands_loads_injected_plugin_mcp_servers_from_bootstrap(monkeypatch, tmp_path):
+    import subprocess
+    import sys
+
+    import litellm
+    from openhands.sdk.llm import LLMResponse, Message, MessageToolCall, TextContent
+    from openhands.sdk.llm.utils.metrics import MetricsSnapshot
+
+    bootstrap_script = (
+        Path(__file__).resolve().parents[1] / "deploy" / "firecracker" / "guest-bootstrap.sh"
+    )
+    bootstrap_json = tmp_path / "bootstrap.json"
+    env_out = tmp_path / "lisa.env"
+    plugins_dir = tmp_path / "plugins"
+    plugin_script = tmp_path / "plugin_mcp.py"
+    plugin_script.write_text(
+        "import os\n"
+        "from fastmcp import FastMCP\n"
+        "mcp = FastMCP('external-plugin')\n"
+        "@mcp.tool()\n"
+        "def plugin_ping(value: str) -> str:\n"
+        "    return f\"pong:{value}:{os.getenv('LITERAL_CHECK', '')}\"\n"
+        "if __name__ == '__main__':\n"
+        "    mcp.run()\n",
+        encoding="utf-8",
+    )
+    bootstrap_json.write_text(
+        json.dumps(
+            {
+                "env": {"GEMINI_API_KEY": "test-key"},
+                "plugins": {
+                    "external": {
+                        "transport": "stdio",
+                        "command": sys.executable,
+                        "args": [str(plugin_script)],
+                        "env": {"LITERAL_CHECK": "${LISA_HOST_SECRET}"},
+                    },
+                    "disabled_plugin": {
+                        "transport": "stdio",
+                        "command": sys.executable,
+                        "args": ["-c", "raise SystemExit(1)"],
+                        "enabled": False,
+                    },
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    subprocess.run(
+        [str(bootstrap_script)],
+        check=True,
+        env={
+            "PATH": "/usr/local/bin:/usr/bin:/bin",
+            "LISAVM_BOOTSTRAP_JSON": str(bootstrap_json),
+            "LISAVM_ENV_OUT": str(env_out),
+            "LISAVM_PLUGINS_DIR": str(plugins_dir),
+        },
+    )
+
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    monkeypatch.setenv("LISA_HOST_SECRET", "must-not-expand-into-plugin")
+    monkeypatch.setenv("LISA_MCP_SERVERS_PATH", str(plugins_dir / "mcp-servers.json"))
+    monkeypatch.delenv("LISA_DATABASE_URL", raising=False)
+    monkeypatch.delenv("LISA_DATABASE_READ_URL", raising=False)
+
+    step = {"count": 0}
+
+    def fake_completion(self, messages, tools=None, **_kwargs):
+        del messages
+        step["count"] += 1
+        if step["count"] == 1:
+            ping_name = next(
+                tool.name for tool in (tools or []) if tool.name.endswith("plugin_ping")
+            )
+            return LLMResponse(
+                message=Message(
+                    role="assistant",
+                    content=[],
+                    tool_calls=[
+                        MessageToolCall(
+                            id="call-plugin-1",
+                            name=ping_name,
+                            arguments=json.dumps({"value": "ok"}),
+                            origin="completion",
+                        )
+                    ],
+                ),
+                metrics=MetricsSnapshot(),
+                raw_response=litellm.ModelResponse(),
+            )
+        return LLMResponse(
+            message=Message(
+                role="assistant",
+                content=[TextContent(text="Plugin call completed.")],
+            ),
+            metrics=MetricsSnapshot(),
+            raw_response=litellm.ModelResponse(),
+        )
+
+    monkeypatch.setattr(agent.LLM, "completion", fake_completion)
+
+    turn = agent.OpenHandsBackend().run_turn(
+        conversation_id="44444444-4444-4444-8444-444444444444",
+        directory=str(tmp_path / "conv"),
+        workspace_id="11111111-1111-4111-8111-111111111111",
+        text="Call plugin_ping with ok.",
+    )
+    assert not turn.failed
+    evidence_items = [item for item in turn.activities if item["kind"] == "evidence"]
+    assert any("pong:ok:${LISA_HOST_SECRET}" in item["detail"] for item in evidence_items)
+    assert all("must-not-expand-into-plugin" not in item["detail"] for item in evidence_items)
+
+    for reserved_name in ("lisa", "LISA"):
+        (plugins_dir / "mcp-servers.json").write_text(
+            json.dumps({reserved_name: {"transport": "stdio", "command": "echo", "enabled": False}}),
+            encoding="utf-8",
+        )
+        with pytest.raises(ValueError, match="(?i)lisa"):
+            agent.build_conversation(
+                "55555555-5555-4555-8555-555555555555",
+                str(tmp_path / "conv-reserved"),
+                workspace_id="11111111-1111-4111-8111-111111111111",
+            )

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 import os
 import sys
@@ -46,6 +47,37 @@ from lisa.views.database import LISA_DATABASE_SCHEMA
 from .llm_recording import install_call_logger
 
 logger = logging.getLogger(__name__)
+RESERVED_MCP_SERVER_NAMES = frozenset({"lisa"})
+
+
+def _load_plugin_mcp_servers() -> dict[str, MCPServer]:
+    """Load validated external MCP server definitions without overriding built-in servers."""
+    raw_path = os.getenv("LISA_MCP_SERVERS_PATH", "").strip()
+    if not raw_path:
+        return {}
+    path = Path(raw_path)
+    if not path.exists():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise ValueError(f"Invalid MCP servers configuration at {path}") from error
+    if not isinstance(payload, dict):
+        raise ValueError("MCP servers configuration must be a JSON object")
+    servers: dict[str, MCPServer] = {}
+    for raw_name, raw_server in payload.items():
+        if not isinstance(raw_name, str) or not raw_name.strip():
+            raise ValueError("MCP server name must be a non-empty string")
+        name = raw_name.strip()
+        if name.lower() in RESERVED_MCP_SERVER_NAMES:
+            raise ValueError(f"Plugin MCP config cannot override reserved server {name!r}")
+        if not isinstance(raw_server, dict):
+            raise ValueError(f"MCP server {name!r} configuration must be a JSON object")
+        # Mark injected plugin definitions literal so ${VAR} syntax cannot read Lisa process secrets.
+        server = MCPServer.model_validate(raw_server).as_literal()
+        if server.enabled:
+            servers[name] = server
+    return servers
 
 
 class _NamespaceLoadingExecutor(MCPToolExecutor):
@@ -433,6 +465,7 @@ def build_conversation(
     Returns:
         An OpenHands conversation ready to receive one user message.
     """
+    plugin_mcp_servers = _load_plugin_mcp_servers()
     llm, model_name = create_lisa_llm()
     skill_dir = Path(os.getenv("LISA_SKILL_DIR", "/app/skills"))
     if not skill_dir.is_dir():
@@ -476,16 +509,19 @@ def build_conversation(
         else LISA_SYSTEM_PROMPT
     )
     skill_prompt = "\n\n".join(f"{skill.name}\n{skill.content}" for skill in skills)
+    runtime_configuration: dict[str, Any] = {
+        "provider": "custom" if os.getenv("LISA_BASE_URL") else "google",
+        "provider_endpoint": _provider_endpoint_fingerprint(os.getenv("LISA_BASE_URL")),
+        "model": model_name,
+        "context_window_tokens": _configured_context_window(llm),
+    }
+    if plugin_mcp_servers:
+        runtime_configuration["plugin_mcp_servers"] = sorted(plugin_mcp_servers)
     context_configuration = context_configuration_fingerprint(
         model_name,
         _configured_retained_tail_tokens(),
         system_prompt=f"{system_prompt}\n\n{skill_prompt}",
-        runtime_configuration={
-            "provider": "custom" if os.getenv("LISA_BASE_URL") else "google",
-            "provider_endpoint": _provider_endpoint_fingerprint(os.getenv("LISA_BASE_URL")),
-            "model": model_name,
-            "context_window_tokens": _configured_context_window(llm),
-        },
+        runtime_configuration=runtime_configuration,
     )
     agent = Agent(
         llm=llm,
@@ -495,7 +531,8 @@ def build_conversation(
                 command=sys.executable,
                 args=["-m", "lisa.mcp_app"],
                 env={key: SecretStr(value) for key, value in mcp_env.items()},
-            )
+            ),
+            **plugin_mcp_servers,
         },
         agent_context=AgentContext(skills=skills),
         system_prompt=system_prompt,

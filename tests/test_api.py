@@ -946,3 +946,70 @@ def test_delete_cannot_be_undone_by_a_message_waiting_for_the_conversation_lock(
         ).status_code
         == 404
     )
+
+
+def test_health_verifies_database_provisioning_and_readiness(
+    client, monkeypatch, lisa_test_database
+):
+    import psycopg
+
+    healthy = client.get("/health")
+    assert healthy.status_code == 200
+    assert healthy.json()["ok"] is True
+    assert healthy.json()["database_configured"] is True
+    assert healthy.json()["database_ready"] is True
+
+    workspace_id = client.app.state.workspace_services.context.workspace_id()
+    unprovisioned_db = lisa_test_database(workspace_id)
+    with psycopg.connect(unprovisioned_db.provision_url, autocommit=True) as conn:
+        conn.execute("DROP SCHEMA lisa CASCADE")
+    monkeypatch.setenv("LISA_DATABASE_URL", unprovisioned_db.writer_url)
+    monkeypatch.setenv("LISA_DATABASE_READ_URL", unprovisioned_db.reader_url)
+
+    unprovisioned = client.get("/health")
+    assert unprovisioned.status_code == 503
+    assert unprovisioned.json()["ok"] is False
+    assert unprovisioned.json()["database_configured"] is True
+    assert unprovisioned.json()["database_ready"] is False
+
+    missing_queue_db = lisa_test_database(workspace_id)
+    with psycopg.connect(missing_queue_db.provision_url, autocommit=True) as conn:
+        conn.execute("DROP TABLE pgmq.q_lisa_session_evaluations CASCADE")
+    monkeypatch.setenv("LISA_DATABASE_URL", missing_queue_db.writer_url)
+    monkeypatch.setenv("LISA_DATABASE_READ_URL", missing_queue_db.reader_url)
+
+    missing_queue = client.get("/health")
+    assert missing_queue.status_code == 503
+    assert missing_queue.json()["ok"] is False
+    assert missing_queue.json()["database_ready"] is False
+
+    other_db = lisa_test_database(str(uuid4()))
+    monkeypatch.setenv("LISA_DATABASE_URL", other_db.writer_url)
+    monkeypatch.setenv("LISA_DATABASE_READ_URL", other_db.reader_url)
+    wrong_workspace = client.get("/health")
+    assert wrong_workspace.status_code == 503
+    assert wrong_workspace.json()["ok"] is False
+    assert wrong_workspace.json()["database_ready"] is False
+
+    monkeypatch.setenv(
+        "LISA_DATABASE_URL", "postgresql://lisa_writer:super-secret-pw@127.0.0.1:1/lisa"
+    )
+    unreachable = client.get("/health")
+    assert unreachable.status_code == 503
+    assert unreachable.json()["ok"] is False
+    assert unreachable.json()["database_ready"] is False
+    assert "super-secret-pw" not in unreachable.text
+
+    monkeypatch.delenv("LISA_DATABASE_URL", raising=False)
+    monkeypatch.delenv("LISA_DATABASE_READ_URL", raising=False)
+    dev_optional = client.get("/health")
+    assert dev_optional.status_code == 200
+    assert dev_optional.json()["ok"] is True
+    assert dev_optional.json()["database_configured"] is False
+    assert dev_optional.json()["database_ready"] is False
+
+    required = client.get("/health?require_db=1")
+    assert required.status_code == 503
+    assert required.json()["ok"] is False
+    assert required.json()["database_configured"] is False
+    assert required.json()["database_ready"] is False

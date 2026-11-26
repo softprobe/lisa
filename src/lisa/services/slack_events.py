@@ -243,6 +243,14 @@ class SlackEventWorker:
         self.run_turn = run_turn
         self._tasks: dict[str, asyncio.Task] = {}
 
+    @property
+    def active_jobs(self) -> int:
+        return sum(1 for task in self._tasks.values() if not task.done())
+
+    @property
+    def is_busy(self) -> bool:
+        return self.active_jobs > 0
+
     async def run_forever(self, workspace_id: str, interval: float = 1.0) -> None:
         self.events.recover_interrupted(workspace_id)
         while True:
