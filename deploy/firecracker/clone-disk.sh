@@ -14,10 +14,12 @@ if [[ ! -f "${SOURCE_ROOTFS}" ]]; then
   exit 1
 fi
 
-mkdir -p "$(dirname "${TARGET_DISK}")"
+mkdir -p -m 0700 "$(dirname "${TARGET_DISK}")"
+chmod 0700 "$(dirname "${TARGET_DISK}")"
 tmp_disk="$(mktemp "${TARGET_DISK}.XXXXXX")"
 trap 'rm -f "${tmp_disk}"' EXIT
 
 cp --reflink=auto --sparse=always "${SOURCE_ROOTFS}" "${tmp_disk}"
+chmod 0600 "${tmp_disk}"
 mv "${tmp_disk}" "${TARGET_DISK}"
 echo "cloned ${SOURCE_ROOTFS} -> ${TARGET_DISK}"

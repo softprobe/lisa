@@ -107,7 +107,7 @@ func (p *fakeProvisioner) InjectBootstrap(_ string, cfg domain.BootstrapConfig) 
 	return nil
 }
 
-func (p *fakeProvisioner) EnsureTAP(tapName, _ string) error {
+func (p *fakeProvisioner) EnsureTAP(tapName, _ string, _, _ int) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.tapsEnsured = append(p.tapsEnsured, tapName)
@@ -245,7 +245,6 @@ func TestIdleReaperRespectsBusyAndPersistenceAcrossRestart(t *testing.T) {
 		t.Fatalf("expected sleeping when idle and not busy, got %s", got.State)
 	}
 
-	// Simulate lisavm restart by constructing a new Manager from disk.
 	mgr2, err := New(Config{
 		RootDir:    root,
 		RootfsPath: filepath.Join(root, "rootfs.ext4"),
@@ -274,8 +273,6 @@ func TestCronSchedulerWakesSleepingVMAndExecutesJob(t *testing.T) {
 	}))
 	defer guestSrv.Close()
 
-	// Point guest HTTP traffic at guestSrv's host:port by listening on port 8000?
-	// Instead, test executeScheduledJob target URL or use a custom RoundTripper on mgr.client.
 	addr := strings.TrimPrefix(guestSrv.URL, "http://")
 	hostOnly, portOnly, _ := net.SplitHostPort(addr)
 

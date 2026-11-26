@@ -38,7 +38,7 @@ func (stubProv) CloneDisk(_, dst string) error {
 	return os.WriteFile(dst, []byte("d"), 0o644)
 }
 func (stubProv) InjectBootstrap(_ string, _ domain.BootstrapConfig) error { return nil }
-func (stubProv) EnsureTAP(_, _ string) error                              { return nil }
+func (stubProv) EnsureTAP(_, _ string, _, _ int) error                    { return nil }
 func (stubProv) DeleteTAP(_ string) error                                 { return nil }
 
 func TestServerAuthAndCRUD(t *testing.T) {
@@ -58,7 +58,6 @@ func TestServerAuthAndCRUD(t *testing.T) {
 
 	srv := New(mgr, "secret-token")
 
-	// Health is unauthenticated.
 	req := httptest.NewRequest(http.MethodGet, "/health", nil)
 	rec := httptest.NewRecorder()
 	srv.ServeHTTP(rec, req)
@@ -66,7 +65,6 @@ func TestServerAuthAndCRUD(t *testing.T) {
 		t.Fatalf("expected 200 on /health, got %d", rec.Code)
 	}
 
-	// /v1/* requires bearer token when configured.
 	req = httptest.NewRequest(http.MethodGet, "/v1/instances", nil)
 	rec = httptest.NewRecorder()
 	srv.ServeHTTP(rec, req)
@@ -74,7 +72,6 @@ func TestServerAuthAndCRUD(t *testing.T) {
 		t.Fatalf("expected 401 without token, got %d", rec.Code)
 	}
 
-	// Create instance with valid token.
 	body := bytes.NewBufferString(`{"owner_id":"ws-1","name":"vm-a","idle_timeout_sec":10}`)
 	req = httptest.NewRequest(http.MethodPost, "/v1/instances", body)
 	req.Header.Set("Authorization", "Bearer secret-token")
@@ -88,7 +85,6 @@ func TestServerAuthAndCRUD(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Patch idle_timeout_sec.
 	req = httptest.NewRequest(http.MethodPatch, "/v1/instances/"+created.ID, bytes.NewBufferString(`{"idle_timeout_sec":30}`))
 	req.Header.Set("Authorization", "Bearer secret-token")
 	rec = httptest.NewRecorder()
@@ -97,7 +93,6 @@ func TestServerAuthAndCRUD(t *testing.T) {
 		t.Fatalf("expected 200 on PATCH, got %d", rec.Code)
 	}
 
-	// Sleep & Wake.
 	req = httptest.NewRequest(http.MethodPost, "/v1/instances/"+created.ID+"/sleep", nil)
 	req.Header.Set("Authorization", "Bearer secret-token")
 	rec = httptest.NewRecorder()
@@ -114,7 +109,6 @@ func TestServerAuthAndCRUD(t *testing.T) {
 		t.Fatalf("expected 200 on wake, got %d", rec.Code)
 	}
 
-	// Delete.
 	req = httptest.NewRequest(http.MethodDelete, "/v1/instances/"+created.ID, nil)
 	req.Header.Set("Authorization", "Bearer secret-token")
 	rec = httptest.NewRecorder()

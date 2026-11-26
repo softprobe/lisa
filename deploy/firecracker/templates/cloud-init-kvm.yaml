@@ -21,7 +21,26 @@ write_files:
       LISAVM_BRIDGE=lisabr0
       LISAVM_GATEWAY_IP=172.16.0.1
       LISAVM_VCPU_COUNT=1
-      LISAVM_MEM_SIZE_MIB=512
+      LISAVM_MEM_SIZE_MIB=1024
+
+  - path: /etc/systemd/system/lisavm-network.service
+    permissions: "0644"
+    owner: root:root
+    content: |
+      [Unit]
+      Description=Lisa Firecracker Bridge and NAT Networking
+      After=network-online.target docker.service
+      Wants=network-online.target
+      Before=lisavm.service
+
+      [Service]
+      Type=oneshot
+      RemainAfterExit=yes
+      EnvironmentFile=-/etc/lisavm/lisavm.env
+      ExecStart=/usr/local/bin/lisavm-network
+
+      [Install]
+      WantedBy=multi-user.target
 
   - path: /etc/systemd/system/lisavm.service
     permissions: "0644"
@@ -29,8 +48,9 @@ write_files:
     content: |
       [Unit]
       Description=Lisa Firecracker MicroVM Control Plane
-      After=network-online.target
+      After=network-online.target lisavm-network.service
       Wants=network-online.target
+      Requires=lisavm-network.service
 
       [Service]
       Type=simple
@@ -51,8 +71,7 @@ runcmd:
     RELEASE_TAG="${LISAVM_RELEASE_TAG:-latest}"
     case "$(uname -m)" in
       x86_64) ARCH="amd64" ;;
-      aarch64|arm64) ARCH="arm64" ;;
-      *) echo "unsupported arch: $(uname -m)" >&2; exit 1 ;;
+      *) echo "unsupported arch: $(uname -m) (only x86_64/amd64 is supported)" >&2; exit 1 ;;
     esac
 
     if [ "${RELEASE_TAG}" = "latest" ]; then
@@ -64,20 +83,25 @@ runcmd:
     WORKDIR="$(mktemp -d)"
     trap 'rm -rf "${WORKDIR}"' EXIT
 
-    curl -fsSL "${BASE_URL}/SHA256SUMS" -o "${WORKDIR}/SHA256SUMS"
-    curl -fsSL "${BASE_URL}/lisavm-linux-${ARCH}" -o "${WORKDIR}/lisavm-linux-${ARCH}"
-    curl -fsSL "${BASE_URL}/rootfs-${ARCH}.ext4.zst" -o "${WORKDIR}/rootfs-${ARCH}.ext4.zst"
-    curl -fsSL "${BASE_URL}/setup-kvm-host.sh" -o "${WORKDIR}/setup-kvm-host.sh"
+    for artifact in \
+      SHA256SUMS \
+      "lisavm-linux-${ARCH}" \
+      "rootfs-${ARCH}.ext4.zst" \
+      setup-kvm-host.sh \
+      lisavm-network.sh \
+      lisavm-network.service; do
+      curl -fsSL "${BASE_URL}/${artifact}" -o "${WORKDIR}/${artifact}"
+    done
 
-    (cd "${WORKDIR}" && sha256sum -c --ignore-missing SHA256SUMS)
+    (cd "${WORKDIR}" && sha256sum -c SHA256SUMS)
 
     install -m 0755 "${WORKDIR}/lisavm-linux-${ARCH}" /usr/local/bin/lisavm
     mkdir -p /var/lib/lisavm/images
     zstd -d -f "${WORKDIR}/rootfs-${ARCH}.ext4.zst" -o /var/lib/lisavm/images/rootfs.ext4
     chmod 0644 /var/lib/lisavm/images/rootfs.ext4
 
-    chmod +x "${WORKDIR}/setup-kvm-host.sh"
+    chmod 0755 "${WORKDIR}/setup-kvm-host.sh" "${WORKDIR}/lisavm-network.sh"
     "${WORKDIR}/setup-kvm-host.sh"
 
     systemctl daemon-reload
-    systemctl enable --now lisavm.service
+    systemctl enable --now lisavm-network.service lisavm.service

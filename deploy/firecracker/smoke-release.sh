@@ -14,9 +14,8 @@ fi
 
 case "$(uname -m)" in
   x86_64 | amd64) ARCH="amd64" ;;
-  aarch64 | arm64) ARCH="arm64" ;;
   *)
-    echo "error: unsupported architecture $(uname -m)" >&2
+    echo "error: unsupported architecture $(uname -m) (only x86_64/amd64 is supported)" >&2
     exit 1
     ;;
 esac
@@ -71,6 +70,7 @@ chmod 0644 "${STAGE_DIR}/rootfs.ext4"
 
 echo "==> 4. Validating host templates"
 for tpl in \
+  lisavm-network.service \
   lisavm.service \
   lisavm.env.example \
   Caddyfile.example \
@@ -84,10 +84,10 @@ for tpl in \
 done
 
 if command -v systemd-analyze >/dev/null 2>&1; then
-  # systemd-analyze verify checks unit syntax; rewrite ExecStart to staged binary for local check.
+  cp "${SCRIPT_DIR}/templates/lisavm-network.service" "${STAGE_DIR}/lisavm-network.service"
   sed "s|/usr/local/bin/lisavm|${STAGE_DIR}/lisavm|g" \
     "${SCRIPT_DIR}/templates/lisavm.service" > "${STAGE_DIR}/lisavm.service"
-  systemd-analyze verify "${STAGE_DIR}/lisavm.service"
+  systemd-analyze verify "${STAGE_DIR}/lisavm-network.service" "${STAGE_DIR}/lisavm.service"
 fi
 
 if python3 -c 'import yaml' >/dev/null 2>&1; then
@@ -98,7 +98,8 @@ if python3 -c 'import yaml' >/dev/null 2>&1; then
 fi
 
 echo "==> 5. Starting packaged lisavm binary on ${LISTEN_ADDR}"
-mkdir -p "${SMOKE_ROOT}/images" "${SMOKE_ROOT}/instances" "${SMOKE_ROOT}/snapshots"
+mkdir -p -m 0700 "${SMOKE_ROOT}/instances" "${SMOKE_ROOT}/snapshots" "${SMOKE_ROOT}/jailer"
+mkdir -p "${SMOKE_ROOT}/images"
 KERNEL_PATH="${LISAVM_ROOT}/vmlinux"
 LISAVM_ROOT="${SMOKE_ROOT}" \
 LISAVM_ROOTFS_PATH="${STAGE_DIR}/rootfs.ext4" \
@@ -172,7 +173,7 @@ if kill -0 "${VM_PID}" 2>/dev/null; then
   echo "error: firecracker process ${VM_PID} still running after sleep" >&2
   exit 1
 fi
-echo "verified sleep (Firecracker process ${VM_PID} exited)"
+echo "verified sleep (jailed Firecracker process ${VM_PID} exited)"
 
 echo "==> 8. Waking VM and verifying disk persistence"
 list_resp="$(curl -fsS -H "Authorization: Bearer ${API_TOKEN}" \

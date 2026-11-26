@@ -27,27 +27,37 @@ func main() {
 	rootfsPath := envOr("LISAVM_ROOTFS_PATH", filepath.Join(root, "images", "rootfs.ext4"))
 	kernelPath := envOr("LISAVM_KERNEL_PATH", filepath.Join(root, "vmlinux"))
 	fcBin := envOr("LISAVM_FIRECRACKER_BIN", "firecracker")
+	jailerBin := envOr("LISAVM_JAILER_BIN", "jailer")
+	chrootBase := envOr("LISAVM_JAILER_CHROOT_BASE", filepath.Join(root, "jailer"))
+	jailerUID := envInt("LISAVM_JAILER_UID", 0)
+	jailerGID := envInt("LISAVM_JAILER_GID", 0)
 	apiToken := os.Getenv("LISAVM_API_TOKEN")
 	vcpuCount := envInt("LISAVM_VCPU_COUNT", 1)
-	memSizeMiB := envInt("LISAVM_MEM_SIZE_MIB", 512)
+	memSizeMiB := envInt("LISAVM_MEM_SIZE_MIB", 1024)
 
 	st, err := store.New(root)
 	if err != nil {
 		log.Fatalf("init store: %v", err)
 	}
 	drv := firecracker.NewDriver(firecracker.Config{
-		BinaryPath: fcBin,
-		KernelPath: kernelPath,
-		VCPUCount:  vcpuCount,
-		MemSizeMiB: memSizeMiB,
+		BinaryPath:    fcBin,
+		JailerPath:    jailerBin,
+		ChrootBaseDir: chrootBase,
+		KernelPath:    kernelPath,
+		VCPUCount:     vcpuCount,
+		MemSizeMiB:    memSizeMiB,
+		JailerUID:     jailerUID,
+		JailerGID:     jailerGID,
 	})
-	prov := host.NewLinuxProvisioner()
+	prov := host.NewLinuxProvisioner(gatewayIP)
 
 	mgr, err := manager.New(manager.Config{
 		RootDir:           root,
 		RootfsPath:        rootfsPath,
 		BridgeName:        bridge,
 		GatewayIP:         gatewayIP,
+		JailerUID:         jailerUID,
+		JailerGID:         jailerGID,
 		ReaperInterval:    time.Second,
 		SchedulerInterval: time.Second,
 	}, st, drv, prov)

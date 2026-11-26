@@ -1,0 +1,15 @@
+[Unit]
+Description=Lisa Firecracker Bridge and NAT Networking
+Documentation=https://github.com/softprobe/lisa
+After=network-online.target docker.service
+Wants=network-online.target
+Before=lisavm.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+EnvironmentFile=-/etc/lisavm/lisavm.env
+ExecStart=/usr/local/bin/lisavm-network
+
+[Install]
+WantedBy=multi-user.target

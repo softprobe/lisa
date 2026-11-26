@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FIRECRACKER_VERSION="${FIRECRACKER_VERSION:-v1.10.1}"
 KERNEL_VERSION="${KERNEL_VERSION:-6.1.102}"
 LISAVM_ROOT="${LISAVM_ROOT:-/var/lib/lisavm}"
 LISAVM_BRIDGE="${LISAVM_BRIDGE:-lisabr0}"
 LISAVM_BRIDGE_CIDR="${LISAVM_BRIDGE_CIDR:-172.16.0.1/16}"
 BIN_DIR="${BIN_DIR:-/usr/local/bin}"
+SYSTEMD_DIR="${SYSTEMD_DIR:-/etc/systemd/system}"
 
 if [[ "${EUID}" -ne 0 ]]; then
   echo "error: setup-kvm-host.sh must run as root (try sudo)" >&2
@@ -20,14 +22,15 @@ fi
 
 case "$(uname -m)" in
   x86_64) ARCH="x86_64" ;;
-  aarch64 | arm64) ARCH="aarch64" ;;
   *)
-    echo "error: unsupported architecture $(uname -m)" >&2
+    echo "error: unsupported architecture $(uname -m) (only x86_64/amd64 is supported)" >&2
     exit 1
     ;;
 esac
 
-mkdir -p "${LISAVM_ROOT}/images" "${LISAVM_ROOT}/instances" "${LISAVM_ROOT}/snapshots"
+mkdir -p "${LISAVM_ROOT}/images"
+mkdir -p -m 0700 "${LISAVM_ROOT}/instances" "${LISAVM_ROOT}/snapshots" "${LISAVM_ROOT}/jailer"
+chmod 0700 "${LISAVM_ROOT}/instances" "${LISAVM_ROOT}/snapshots" "${LISAVM_ROOT}/jailer"
 
 install_firecracker() {
   local expected_ver="${FIRECRACKER_VERSION#v}"
@@ -68,11 +71,6 @@ install_kernel() {
     return 0
   fi
 
-  local mm_ver="${KERNEL_VERSION%.*}"
-  if [[ "${mm_ver}" == *.* ]]; then
-    # Use major.minor for Firecracker CI S3 path (e.g., v1.10).
-    :
-  fi
   local fc_series="${FIRECRACKER_VERSION%.*}"
   local url="https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/${fc_series}/${ARCH}/vmlinux-${KERNEL_VERSION}"
   local tmp_kernel
@@ -86,43 +84,39 @@ install_kernel() {
   echo "installed guest kernel to ${kernel_path}"
 }
 
-configure_networking() {
-  if ! ip link show "${LISAVM_BRIDGE}" >/dev/null 2>&1; then
-    ip link add name "${LISAVM_BRIDGE}" type bridge
+configure_persistent_networking() {
+  local net_script_src=""
+  if [[ -f "${SCRIPT_DIR}/lisavm-network.sh" ]]; then
+    net_script_src="${SCRIPT_DIR}/lisavm-network.sh"
+  else
+    echo "error: missing ${SCRIPT_DIR}/lisavm-network.sh alongside setup-kvm-host.sh" >&2
+    exit 1
+  fi
+  install -m 0755 "${net_script_src}" "${BIN_DIR}/lisavm-network"
+
+  local net_unit_src=""
+  if [[ -f "${SCRIPT_DIR}/templates/lisavm-network.service" ]]; then
+    net_unit_src="${SCRIPT_DIR}/templates/lisavm-network.service"
+  elif [[ -f "${SCRIPT_DIR}/lisavm-network.service" ]]; then
+    net_unit_src="${SCRIPT_DIR}/lisavm-network.service"
+  else
+    echo "error: missing lisavm-network.service alongside setup-kvm-host.sh" >&2
+    exit 1
   fi
 
-  if ! ip -4 addr show dev "${LISAVM_BRIDGE}" | grep -qF "${LISAVM_BRIDGE_CIDR}"; then
-    ip addr replace "${LISAVM_BRIDGE_CIDR}" dev "${LISAVM_BRIDGE}"
-  fi
-  ip link set dev "${LISAVM_BRIDGE}" up
-
-  sysctl -w net.ipv4.ip_forward=1 >/dev/null
-  mkdir -p /etc/sysctl.d
-  printf 'net.ipv4.ip_forward = 1\n' > /etc/sysctl.d/99-lisavm.conf
-
-  local subnet
-  subnet="$(python3 -c 'import ipaddress, sys; print(ipaddress.ip_interface(sys.argv[1]).network)' "${LISAVM_BRIDGE_CIDR}")"
-  local egress_iface
-  egress_iface="$(ip -4 route show default | awk '{print $5; exit}')"
-
-  iptables -C FORWARD -i "${LISAVM_BRIDGE}" -o "${LISAVM_BRIDGE}" -j ACCEPT 2>/dev/null || \
-    iptables -A FORWARD -i "${LISAVM_BRIDGE}" -o "${LISAVM_BRIDGE}" -j ACCEPT
-
-  if [[ -n "${egress_iface}" ]]; then
-    iptables -t nat -C POSTROUTING -s "${subnet}" -o "${egress_iface}" -j MASQUERADE 2>/dev/null || \
-      iptables -t nat -A POSTROUTING -s "${subnet}" -o "${egress_iface}" -j MASQUERADE
-
-    iptables -C FORWARD -i "${LISAVM_BRIDGE}" -o "${egress_iface}" -j ACCEPT 2>/dev/null || \
-      iptables -A FORWARD -i "${LISAVM_BRIDGE}" -o "${egress_iface}" -j ACCEPT
-
-    iptables -C FORWARD -i "${egress_iface}" -o "${LISAVM_BRIDGE}" -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT 2>/dev/null || \
-      iptables -A FORWARD -i "${egress_iface}" -o "${LISAVM_BRIDGE}" -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+  if [[ -d "${SYSTEMD_DIR}" ]]; then
+    install -m 0644 "${net_unit_src}" "${SYSTEMD_DIR}/lisavm-network.service"
   fi
 
-  echo "configured bridge ${LISAVM_BRIDGE} (${LISAVM_BRIDGE_CIDR})"
+  LISAVM_BRIDGE="${LISAVM_BRIDGE}" LISAVM_BRIDGE_CIDR="${LISAVM_BRIDGE_CIDR}" "${BIN_DIR}/lisavm-network"
+
+  if command -v systemctl >/dev/null 2>&1 && [[ -d /run/systemd/system ]]; then
+    systemctl daemon-reload
+    systemctl enable lisavm-network.service >/dev/null
+  fi
 }
 
 install_firecracker
 install_kernel
-configure_networking
+configure_persistent_networking
 echo "kvm host ready: ${LISAVM_ROOT}"

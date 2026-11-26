@@ -1,8 +1,9 @@
 [Unit]
 Description=Lisa Firecracker MicroVM Control Plane
 Documentation=https://github.com/softprobe/lisa
-After=network-online.target
+After=network-online.target lisavm-network.service
 Wants=network-online.target
+Requires=lisavm-network.service
 
 [Service]
 Type=simple

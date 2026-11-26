@@ -54,28 +54,60 @@ for _ in $(seq 1 50); do
 done
 curl -fsS "${BASE_URL}/health" | grep -q '"ok"'
 
-echo "==> 3. Provisioning instance (idle_timeout_sec=4)"
+echo "==> 3. Provisioning instance (idle_timeout_sec=4) with secret env/plugins"
+SECRET_SENTINEL="secret-verify-token-do-not-persist"
 create_resp="$(curl -fsS -X POST "${BASE_URL}/v1/instances" \
   -H "Authorization: Bearer ${API_TOKEN}" \
   -H "Content-Type: application/json" \
-  -d '{
-    "owner_id": "11111111-1111-1111-1111-111111111111",
-    "name": "verify-lisavm",
-    "idle_timeout_sec": 4,
-    "env": {
-      "LISA_WORKSPACE_ID": "11111111-1111-1111-1111-111111111111",
-      "LISA_LOCAL_ANONYMOUS": "1"
+  -d "{
+    \"owner_id\": \"11111111-1111-1111-1111-111111111111\",
+    \"name\": \"verify-lisavm\",
+    \"idle_timeout_sec\": 4,
+    \"env\": {
+      \"LISA_WORKSPACE_ID\": \"11111111-1111-1111-1111-111111111111\",
+      \"LISA_LOCAL_ANONYMOUS\": \"1\",
+      \"GEMINI_API_KEY\": \"${SECRET_SENTINEL}\"
+    },
+    \"plugins\": {
+      \"blackbox\": {
+        \"transport\": \"http\",
+        \"url\": \"https://bb.internal/mcp\",
+        \"headers\": {\"Authorization\": \"Bearer ${SECRET_SENTINEL}\"},
+        \"enabled\": false
+      }
     }
-  }')"
+  }")"
 INSTANCE_ID="$(echo "${create_resp}" | jq -r '.id')"
 VM_PID="$(echo "${create_resp}" | jq -r '.pid')"
 if [[ -z "${INSTANCE_ID}" || "${INSTANCE_ID}" == "null" ]]; then
   echo "error: failed to create instance: ${create_resp}" >&2
   exit 1
 fi
-echo "provisioned instance ${INSTANCE_ID} (pid=${VM_PID})"
+if grep -q "${SECRET_SENTINEL}" <<<"${create_resp}" || grep -q "${SECRET_SENTINEL}" "${LISAVM_ROOT}/instances/${INSTANCE_ID}/meta.json"; then
+  echo "error: secret sentinel leaked into API response or meta.json" >&2
+  exit 1
+fi
+fc_uid="$(ps -o uid= -p "${VM_PID}" | tr -d ' ')"
+fc_mount_root="$(awk '$5 == "/" {print $4; exit}' "/proc/${VM_PID}/mountinfo")"
+if [[ "${fc_uid}" -lt 200000 ]] || [[ "${fc_mount_root}" != *"/jailer/firecracker/${INSTANCE_ID}/root" ]] || [[ ! -S "${LISAVM_ROOT}/jailer/firecracker/${INSTANCE_ID}/root/firecracker.sock" ]]; then
+  echo "error: expected jailed Firecracker uid>=200000 and pivot_root under ${LISAVM_ROOT}/jailer/firecracker/${INSTANCE_ID}/root, got uid=${fc_uid} mount_root=${fc_mount_root}" >&2
+  exit 1
+fi
+echo "provisioned jailed instance ${INSTANCE_ID} (pid=${VM_PID}, uid=${fc_uid}, mount_root=${fc_mount_root})"
 
-echo "==> 4. Creating conversation through wake proxy"
+echo "==> 4. Verifying Postgres health, frontend assets, and creating conversation through wake proxy"
+curl -fsS -H "Authorization: Bearer ${API_TOKEN}" \
+  "${BASE_URL}/v1/instances/${INSTANCE_ID}/proxy/health?require_db=1" | \
+  jq -e '.ok == true and .database_configured == true and .database_ready == true' >/dev/null
+proxy_html="$(curl -fsS -H "Authorization: Bearer ${API_TOKEN}" "${BASE_URL}/v1/instances/${INSTANCE_ID}/proxy/")"
+asset_rel="$(grep -oE '/assets/[^"'"'"' >]+\.js' <<<"${proxy_html}" | head -n1 || true)"
+if [[ -z "${asset_rel}" ]]; then
+  echo "error: proxy / did not return Lisa frontend index.html" >&2
+  exit 1
+fi
+curl -fsS -H "Authorization: Bearer ${API_TOKEN}" \
+  "${BASE_URL}/v1/instances/${INSTANCE_ID}/proxy${asset_rel}" >/dev/null
+
 conv_1="$(curl -fsS -X POST -H "Authorization: Bearer ${API_TOKEN}" \
   "${BASE_URL}/v1/instances/${INSTANCE_ID}/proxy/v1/conversations" | jq -r '.conversation_id')"
 if [[ -z "${conv_1}" || "${conv_1}" == "null" ]]; then
@@ -104,7 +136,11 @@ if kill -0 "${VM_PID}" 2>/dev/null; then
   echo "error: firecracker process ${VM_PID} is still running after sleep" >&2
   exit 1
 fi
-echo "verified instance is sleeping and Firecracker process ${VM_PID} exited"
+if [[ -d "${LISAVM_ROOT}/jailer/firecracker/${INSTANCE_ID}" ]]; then
+  echo "error: jailer chroot directory was not cleaned up on sleep" >&2
+  exit 1
+fi
+echo "verified instance is sleeping, Firecracker process ${VM_PID} exited, and jail chroot cleaned up"
 
 echo "==> 6. Waking instance transparently via HTTP proxy"
 list_resp="$(curl -fsS -H "Authorization: Bearer ${API_TOKEN}" \

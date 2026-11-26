@@ -134,7 +134,7 @@ def test_runtime_busy_reports_worker_active_jobs(monkeypatch):
         }
 
 
-def test_workers_track_active_jobs_during_execution():
+def test_workers_track_active_jobs_during_execution(monkeypatch):
     from lisa.services.session_evaluations import SessionEvaluationWorker
     from lisa.services.slack_events import SlackEventWorker
 
@@ -147,7 +147,7 @@ def test_workers_track_active_jobs_during_execution():
             await eval_release.wait()
 
         eval_worker = SessionEvaluationWorker(queue=None, traces=None, services=None)
-        eval_worker._process_message = fake_process_message  # type: ignore[method-assign]
+        monkeypatch.setattr(eval_worker, "_process_message", fake_process_message)
         assert eval_worker.active_jobs == 0
         assert not eval_worker.is_busy
 

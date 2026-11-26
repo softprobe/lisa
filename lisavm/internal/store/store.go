@@ -15,13 +15,15 @@ type Store struct {
 
 func New(root string) (*Store, error) {
 	instancesDir := filepath.Join(root, "instances")
-	if err := os.MkdirAll(instancesDir, 0o755); err != nil {
+	if err := os.MkdirAll(instancesDir, 0o700); err != nil {
 		return nil, fmt.Errorf("create instances dir: %w", err)
 	}
+	_ = os.Chmod(instancesDir, 0o700)
 	snapshotsDir := filepath.Join(root, "snapshots")
-	if err := os.MkdirAll(snapshotsDir, 0o755); err != nil {
+	if err := os.MkdirAll(snapshotsDir, 0o700); err != nil {
 		return nil, fmt.Errorf("create snapshots dir: %w", err)
 	}
+	_ = os.Chmod(snapshotsDir, 0o700)
 	return &Store{root: root}, nil
 }
 
@@ -39,8 +41,11 @@ func (s *Store) MetaPath(id string) string {
 
 func (s *Store) Save(inst *domain.Instance) error {
 	dir := s.InstanceDir(inst.ID)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return fmt.Errorf("create instance dir: %w", err)
+	}
+	if err := os.Chmod(dir, 0o700); err != nil {
+		return fmt.Errorf("chmod instance dir: %w", err)
 	}
 	data, err := json.MarshalIndent(inst, "", "  ")
 	if err != nil {
@@ -48,8 +53,12 @@ func (s *Store) Save(inst *domain.Instance) error {
 	}
 	data = append(data, '\n')
 	tmpPath := s.MetaPath(inst.ID) + ".tmp"
-	if err := os.WriteFile(tmpPath, data, 0o644); err != nil {
+	if err := os.WriteFile(tmpPath, data, 0o600); err != nil {
 		return fmt.Errorf("write temp meta for %s: %w", inst.ID, err)
+	}
+	if err := os.Chmod(tmpPath, 0o600); err != nil {
+		_ = os.Remove(tmpPath)
+		return fmt.Errorf("chmod temp meta for %s: %w", inst.ID, err)
 	}
 	if err := os.Rename(tmpPath, s.MetaPath(inst.ID)); err != nil {
 		_ = os.Remove(tmpPath)

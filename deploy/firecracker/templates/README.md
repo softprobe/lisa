@@ -1,24 +1,25 @@
-# Portable lisavm KVM Host Deployment
+# Portable lisavm KVM host deployment
 
-Deploy `lisavm` and its Firecracker MicroVM runtime on any Linux host with `/dev/kvm`.
+Deploy `lisavm` and its Firecracker MicroVM runtime on any `x86_64` (`amd64`) Linux host with `/dev/kvm`.
 
 ## Prerequisites
 
-- Linux x86_64 or arm64 host with `/dev/kvm` available.
-- Root access (`sudo`) for bridge/TAP networking and Firecracker execution.
+- Linux `x86_64` (`amd64`) host with `/dev/kvm` available.
+- Root access (`sudo`) for bridge/TAP networking and Firecracker jailer execution.
 - Release artifacts from a `lisavm-v*` release (or generated locally with `../package-release.sh`).
 
-## Host Templates
+## Host templates
 
 | File | Purpose |
 |------|---------|
-| `lisavm.service` | systemd unit running `/usr/local/bin/lisavm` |
+| `lisavm-network.service` | systemd oneshot unit persisting `lisabr0` and NAT rules across reboots |
+| `lisavm.service` | systemd unit running `/usr/local/bin/lisavm` after `lisavm-network.service` |
 | `lisavm.env.example` | Environment configuration loaded from `/etc/lisavm/lisavm.env` |
 | `Caddyfile.example` | Automatic TLS reverse proxy when port 443 is publicly reachable |
 | `cloudflared-config.yml.example` | Cloudflare Tunnel ingress when no public IP or inbound port 443 is exposed |
-| `cloud-init-kvm.yaml` | Cloud-init bootstrap for GCP nested-virt KVM, AWS `.metal`, or generic KVM VMs |
+| `cloud-init-kvm.yaml` | Cloud-init bootstrap for GCP nested-virt KVM, AWS `.metal`, or generic `x86_64` KVM VMs |
 
-## 1. GCP Nested Virtualization (Compute Engine)
+## 1. GCP nested virtualization (Compute Engine)
 
 Create a Compute Engine VM with nested virtualization enabled on Ubuntu 24.04 LTS:
 
@@ -33,17 +34,17 @@ gcloud compute instances create lisavm-host \
   --metadata-from-file=user-data=cloud-init-kvm.yaml
 ```
 
-Verify `/dev/kvm` and `lisavm.service` after boot:
+Verify `/dev/kvm`, `lisavm-network.service`, and `lisavm.service` after boot:
 
 ```bash
 ls -l /dev/kvm
-sudo systemctl status lisavm.service
+sudo systemctl status lisavm-network.service lisavm.service
 curl -fsS http://127.0.0.1:7700/health
 ```
 
-## 2. AWS Bare-Metal (`.metal`)
+## 2. AWS bare-metal (`.metal`)
 
-Launch an AWS bare-metal instance (`c6i.metal` for `amd64` or `c7g.metal` for `arm64`) with Ubuntu 24.04 LTS and pass `cloud-init-kvm.yaml` as EC2 user data:
+Launch an AWS `x86_64` bare-metal instance (`c6i.metal`) with Ubuntu 24.04 LTS and pass `cloud-init-kvm.yaml` as EC2 user data:
 
 ```bash
 aws ec2 run-instances \
@@ -52,21 +53,21 @@ aws ec2 run-instances \
   --user-data file://cloud-init-kvm.yaml
 ```
 
-## 3. Generic Linux KVM Host (Manual Install)
+## 3. Generic Linux KVM host (manual install)
 
-1. Verify `/dev/kvm` exists on the host.
-2. Copy `lisavm-linux-<arch>` to `/usr/local/bin/lisavm` (`chmod 0755`).
-3. Decompress `rootfs-<arch>.ext4.zst` to `/var/lib/lisavm/images/rootfs.ext4` (`zstd -d`).
-4. Run `sudo ../setup-kvm-host.sh` to install Firecracker, guest kernel `vmlinux`, and `lisabr0` NAT networking.
-5. Configure `/etc/lisavm/lisavm.env` from `lisavm.env.example` and set a strong `LISAVM_API_TOKEN`.
+1. Verify `/dev/kvm` exists on the `x86_64` host.
+2. Copy `lisavm-linux-amd64` to `/usr/local/bin/lisavm` (`chmod 0755`).
+3. Decompress `rootfs-amd64.ext4.zst` to `/var/lib/lisavm/images/rootfs.ext4` (`zstd -d`).
+4. Run `sudo ../setup-kvm-host.sh` to install Firecracker, `jailer`, guest kernel `vmlinux`, and persistent `lisabr0` NAT networking (`lisavm-network.service`).
+5. Configure `/etc/lisavm/lisavm.env` (`chmod 0600`) from `lisavm.env.example` and set a strong `LISAVM_API_TOKEN`.
 6. Install `lisavm.service` to `/etc/systemd/system/lisavm.service` and start it:
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable --now lisavm.service
+sudo systemctl enable --now lisavm-network.service lisavm.service
 ```
 
-## 4. Expose TLS Endpoint
+## 4. Expose TLS endpoint
 
 - **Public IP with port 80/443:** Install Caddy and copy `Caddyfile.example` to `/etc/caddy/Caddyfile` with your domain name.
 - **Private host / behind NAT:** Install `cloudflared`, create a tunnel, and copy `cloudflared-config.yml.example` to `/etc/cloudflared/config.yml`.

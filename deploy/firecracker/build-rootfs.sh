@@ -5,7 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LISA_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 LISAVM_ROOT="${LISAVM_ROOT:-/var/lib/lisavm}"
 ROOTFS_OUT="${ROOTFS_OUT:-${LISAVM_ROOT}/images/rootfs.ext4}"
-ROOTFS_SIZE_MB="${ROOTFS_SIZE_MB:-2048}"
+ROOTFS_SIZE_MB="${ROOTFS_SIZE_MB:-4096}"
 IMAGE_TAG="${IMAGE_TAG:-lisavm-rootfs:latest}"
 
 if [[ "${EUID}" -ne 0 ]]; then

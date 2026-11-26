@@ -13,9 +13,8 @@ SKIP_ROOTFS="${SKIP_ROOTFS:-0}"
 host_arch() {
   case "$(uname -m)" in
     x86_64 | amd64) echo "amd64" ;;
-    aarch64 | arm64) echo "arm64" ;;
     *)
-      echo "error: unsupported host architecture $(uname -m)" >&2
+      echo "error: unsupported host architecture $(uname -m) (only amd64 is supported)" >&2
       exit 1
       ;;
   esac
@@ -76,24 +75,29 @@ package_rootfs() {
 }
 
 case "${TARGET_ARCH}" in
-  amd64 | arm64)
-    build_binary "${TARGET_ARCH}"
+  amd64)
+    build_binary "amd64"
     if [[ "${SKIP_ROOTFS}" != "1" ]]; then
-      package_rootfs "${TARGET_ARCH}"
+      package_rootfs "amd64"
     fi
     ;;
   all)
     build_binary "amd64"
-    build_binary "arm64"
     if [[ "${SKIP_ROOTFS}" != "1" ]]; then
-      package_rootfs "$(host_arch)"
+      package_rootfs "amd64"
     fi
     ;;
   *)
-    echo "error: unsupported TARGET_ARCH=${TARGET_ARCH} (expected amd64, arm64, or all)" >&2
+    echo "error: unsupported TARGET_ARCH=${TARGET_ARCH} (only amd64 is supported)" >&2
     exit 1
     ;;
 esac
+
+cp "${SCRIPT_DIR}/setup-kvm-host.sh" "${OUT_DIR}/setup-kvm-host.sh"
+cp "${SCRIPT_DIR}/lisavm-network.sh" "${OUT_DIR}/lisavm-network.sh"
+cp "${SCRIPT_DIR}/templates/lisavm-network.service" "${OUT_DIR}/lisavm-network.service"
+chmod 0755 "${OUT_DIR}/setup-kvm-host.sh" "${OUT_DIR}/lisavm-network.sh"
+chmod 0644 "${OUT_DIR}/lisavm-network.service"
 
 (
   cd "${OUT_DIR}"

@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        arch: [amd64, arm64]
+        arch: [amd64]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -57,9 +57,13 @@ jobs:
         with:
           path: release-artifacts
           merge-multiple: true
-      - name: Copy host setup script and compute SHA256SUMS
+      - name: Copy host setup files and compute SHA256SUMS
         run: |
           cp deploy/firecracker/setup-kvm-host.sh release-artifacts/setup-kvm-host.sh
+          cp deploy/firecracker/lisavm-network.sh release-artifacts/lisavm-network.sh
+          cp deploy/firecracker/templates/lisavm-network.service release-artifacts/lisavm-network.service
+          chmod 0755 release-artifacts/setup-kvm-host.sh release-artifacts/lisavm-network.sh
+          chmod 0644 release-artifacts/lisavm-network.service
           cd release-artifacts
           find . -maxdepth 1 -type f ! -name 'SHA256SUMS' -printf '%f\n' | sort | xargs sha256sum > SHA256SUMS
           cat SHA256SUMS

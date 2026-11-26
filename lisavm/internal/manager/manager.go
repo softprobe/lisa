@@ -36,6 +36,8 @@ type Config struct {
 	RootfsPath        string
 	BridgeName        string
 	GatewayIP         string
+	JailerUID         int
+	JailerGID         int
 	ReaperInterval    time.Duration
 	SchedulerInterval time.Duration
 	Now               func() time.Time
@@ -205,8 +207,6 @@ func (m *Manager) Create(ctx context.Context, req domain.CreateInstanceRequest) 
 		DiskPath:       filepath.Join(instDir, "disk.ext4"),
 		SocketPath:     filepath.Join(instDir, "firecracker.sock"),
 		IdleTimeoutSec: req.IdleTimeoutSec,
-		Plugins:        clonePlugins(req.Plugins),
-		Env:            cloneEnv(req.Env),
 		Schedules:      cloneSchedules(req.Schedules),
 		LastActivityAt: now,
 		CreatedAt:      now,
@@ -230,8 +230,8 @@ func (m *Manager) Create(ctx context.Context, req domain.CreateInstanceRequest) 
 		return nil, err
 	}
 	if err := m.host.InjectBootstrap(inst.DiskPath, domain.BootstrapConfig{
-		Env:     inst.Env,
-		Plugins: inst.Plugins,
+		Env:     req.Env,
+		Plugins: req.Plugins,
 	}); err != nil {
 		cleanup()
 		return nil, err
@@ -369,7 +369,8 @@ func (m *Manager) EnsureRunning(ctx context.Context, id string) (*domain.Instanc
 			return nil, err
 		}
 
-		if err := m.host.EnsureTAP(inst.TAP, m.cfg.BridgeName); err != nil {
+		uid, gid := domain.SandboxUIDGID(inst.ID, inst.IP, m.cfg.JailerUID, m.cfg.JailerGID)
+		if err := m.host.EnsureTAP(inst.TAP, m.cfg.BridgeName, uid, gid); err != nil {
 			inst.State = domain.StateSleeping
 			_ = m.store.Save(inst)
 			return nil, err
@@ -412,7 +413,8 @@ func (m *Manager) EnsureRunning(ctx context.Context, id string) (*domain.Instanc
 		return nil, err
 	}
 
-	if err := m.host.EnsureTAP(inst.TAP, m.cfg.BridgeName); err != nil {
+	uid, gid := domain.SandboxUIDGID(inst.ID, inst.IP, m.cfg.JailerUID, m.cfg.JailerGID)
+	if err := m.host.EnsureTAP(inst.TAP, m.cfg.BridgeName, uid, gid); err != nil {
 		inst.State = domain.StateStopped
 		_ = m.store.Save(inst)
 		return nil, err
@@ -695,36 +697,8 @@ func processAlive(pid int) bool {
 
 func cloneInstance(inst *domain.Instance) *domain.Instance {
 	cp := *inst
-	cp.Env = cloneEnv(inst.Env)
-	cp.Plugins = clonePlugins(inst.Plugins)
 	cp.Schedules = cloneSchedules(inst.Schedules)
 	return &cp
-}
-
-func cloneEnv(src map[string]string) map[string]string {
-	if src == nil {
-		return nil
-	}
-	out := make(map[string]string, len(src))
-	for k, v := range src {
-		out[k] = v
-	}
-	return out
-}
-
-func clonePlugins(src map[string]map[string]any) map[string]map[string]any {
-	if src == nil {
-		return nil
-	}
-	out := make(map[string]map[string]any, len(src))
-	for k, v := range src {
-		inner := make(map[string]any, len(v))
-		for ik, iv := range v {
-			inner[ik] = iv
-		}
-		out[k] = inner
-	}
-	return out
 }
 
 func cloneSchedules(src []domain.Schedule) []domain.Schedule {

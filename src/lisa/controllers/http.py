@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import base64
 import hmac
 import json
@@ -10,7 +11,9 @@ from hashlib import sha256
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request
+import psycopg
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
+from psycopg.rows import dict_row
 
 from lisa.bootstrap import WorkspaceServices
 from lisa.models.contracts import (
@@ -127,17 +130,79 @@ def _require_owner_actor(services: WorkspaceServices, actor_id: str) -> None:
         raise HTTPException(status_code=403, detail=str(error)) from error
 
 
+def _check_database_readiness() -> tuple[bool, bool]:
+    writer_url = os.getenv("LISA_DATABASE_URL", "").strip()
+    reader_url = os.getenv("LISA_DATABASE_READ_URL", "").strip()
+    configured = bool(writer_url or reader_url)
+    if not configured:
+        return False, False
+    workspace_raw = os.getenv("LISA_WORKSPACE_ID", "").strip()
+    if not writer_url or not workspace_raw:
+        return True, False
+    try:
+        expected_fingerprint = sha256(str(UUID(workspace_raw)).encode("utf-8")).hexdigest()
+    except ValueError:
+        return True, False
+
+    conn_opts = "-c default_transaction_read_only=on -c statement_timeout=1500"
+    try:
+        with psycopg.connect(
+            writer_url,
+            connect_timeout=2,
+            row_factory=dict_row,
+            options=conn_opts,
+        ) as conn:
+            row = conn.execute(
+                "SELECT d.workspace_fingerprint AS fp, "
+                "to_regclass('lisa.policies') IS NOT NULL AS has_policies, "
+                "to_regclass('lisa.activities') IS NOT NULL AS has_activities, "
+                "to_regclass('pgmq.q_lisa_session_evaluations') IS NOT NULL AS has_eval_queue, "
+                "to_regclass('pgmq.q_lisa_conversation_checkpoints') IS NOT NULL AS has_ckpt_queue "
+                "FROM lisa.deployment AS d WHERE d.singleton = true"
+            ).fetchone()
+            if (
+                not row
+                or row["fp"] != expected_fingerprint
+                or not row["has_policies"]
+                or not row["has_activities"]
+                or not row["has_eval_queue"]
+                or not row["has_ckpt_queue"]
+            ):
+                return True, False
+        if reader_url:
+            with psycopg.connect(
+                reader_url,
+                connect_timeout=2,
+                row_factory=dict_row,
+                options=conn_opts,
+            ) as reader_conn:
+                reader_row = reader_conn.execute(
+                    "SELECT workspace_fingerprint AS fp FROM lisa.readable_deployment"
+                ).fetchone()
+                if not reader_row or reader_row["fp"] != expected_fingerprint:
+                    return True, False
+    except Exception:
+        return True, False
+    return True, True
+
+
 @router.get("/health")
-async def health() -> dict[str, bool]:
+async def health(response: Response = Response(), require_db: bool = False) -> dict[str, bool]:
     base_url = os.getenv("LISA_BASE_URL")
     configured = bool(
         (base_url and os.getenv("LISA_MODEL"))
         or (not base_url and (os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")))
     )
+    database_configured, database_ready = await asyncio.to_thread(_check_database_readiness)
+    ok = (not database_configured or database_ready) and (not require_db or database_ready)
+    if not ok:
+        response.status_code = 503
     return {
-        "ok": True,
+        "ok": ok,
         "model_configured": configured,
         "service_auth_configured": bool(SERVICE_TOKEN),
+        "database_configured": database_configured,
+        "database_ready": database_ready,
     }
 
 

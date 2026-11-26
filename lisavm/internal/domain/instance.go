@@ -2,6 +2,8 @@ package domain
 
 import (
 	"fmt"
+	"hash/fnv"
+	"net"
 	"time"
 )
 
@@ -79,26 +81,24 @@ type BootstrapConfig struct {
 }
 
 type Instance struct {
-	ID             string                    `json:"id"`
-	OwnerID        string                    `json:"owner_id"`
-	Name           string                    `json:"name"`
-	State          State                     `json:"state"`
-	IP             string                    `json:"ip"`
-	GatewayIP      string                    `json:"gateway_ip"`
-	MAC            string                    `json:"mac"`
-	TAP            string                    `json:"tap"`
-	DiskPath       string                    `json:"disk_path"`
-	SocketPath     string                    `json:"socket_path"`
-	SnapshotPath   string                    `json:"snapshot_path,omitempty"`
-	MemFilePath    string                    `json:"mem_file_path,omitempty"`
-	IdleTimeoutSec int                       `json:"idle_timeout_sec"`
-	Plugins        map[string]map[string]any `json:"plugins,omitempty"`
-	Env            map[string]string         `json:"env,omitempty"`
-	Schedules      []Schedule                `json:"schedules,omitempty"`
-	PID            int                       `json:"pid,omitempty"`
-	LastActivityAt time.Time                 `json:"last_activity_at"`
-	CreatedAt      time.Time                 `json:"created_at"`
-	UpdatedAt      time.Time                 `json:"updated_at"`
+	ID             string     `json:"id"`
+	OwnerID        string     `json:"owner_id"`
+	Name           string     `json:"name"`
+	State          State      `json:"state"`
+	IP             string     `json:"ip"`
+	GatewayIP      string     `json:"gateway_ip"`
+	MAC            string     `json:"mac"`
+	TAP            string     `json:"tap"`
+	DiskPath       string     `json:"disk_path"`
+	SocketPath     string     `json:"socket_path"`
+	SnapshotPath   string     `json:"snapshot_path,omitempty"`
+	MemFilePath    string     `json:"mem_file_path,omitempty"`
+	IdleTimeoutSec int        `json:"idle_timeout_sec"`
+	Schedules      []Schedule `json:"schedules,omitempty"`
+	PID            int        `json:"pid,omitempty"`
+	LastActivityAt time.Time  `json:"last_activity_at"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
 }
 
 type CreateInstanceRequest struct {
@@ -114,4 +114,29 @@ type CreateInstanceRequest struct {
 type UpdateInstanceRequest struct {
 	IdleTimeoutSec *int        `json:"idle_timeout_sec,omitempty"`
 	Schedules      *[]Schedule `json:"schedules,omitempty"`
+}
+
+// SandboxUIDGID maps an instance's unique /16 IPv4 slot to a dedicated unprivileged UID/GID
+// so concurrent jailed Firecracker processes cannot signal or inspect one another.
+func SandboxUIDGID(id, ip string, overrideUID, overrideGID int) (int, int) {
+	if overrideUID > 0 && overrideGID > 0 {
+		return overrideUID, overrideGID
+	}
+	var derived int
+	if parsed := net.ParseIP(ip).To4(); parsed != nil {
+		derived = 200000 + int(parsed[2])*256 + int(parsed[3])
+	} else {
+		h := fnv.New32a()
+		_, _ = h.Write([]byte(id))
+		derived = 265536 + int(h.Sum32()%30000)
+	}
+	uid := overrideUID
+	if uid <= 0 {
+		uid = derived
+	}
+	gid := overrideGID
+	if gid <= 0 {
+		gid = derived
+	}
+	return uid, gid
 }
